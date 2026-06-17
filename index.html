@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Renton–Holt Family Record</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#ECE8DC;
+    --paper-2:#E4DFD0;
+    --ink:#23211B;
+    --pine:#2C463A;        /* botanical ink — roots & lines */
+    --pine-soft:#5d7568;
+    --oxblood:#8A3324;     /* proband + gaps + open questions */
+    --faded:#6B6458;
+    --hair:#C7BFAD;
+    --card:#F5F2E9;
+    --gold:#9a7b3f;
+    --shadow:rgba(40,35,25,.10);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 700px at 18% -8%, #F2EEE3 0%, transparent 60%),
+      var(--paper);
+    color:var(--ink);
+    font-family:"Fraunces",Georgia,"Times New Roman",serif;
+    font-optical-sizing:auto;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 26px 90px}
+
+  /* ---------- Masthead ---------- */
+  header.mast{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:10px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--oxblood);font-weight:600}
+  h1{font-size:clamp(34px,6vw,62px);line-height:1.02;font-weight:500;margin:.18em 0 .1em;letter-spacing:-.01em}
+  h1 em{font-style:italic;color:var(--pine)}
+  .sub{max-width:60ch;color:var(--faded);font-size:16px;margin:.4em 0 0}
+  .provenance{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--pine-soft);margin-top:14px;letter-spacing:.02em}
+
+  /* ---------- Legend ---------- */
+  .legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin:26px 0 8px;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.04em;color:var(--faded)}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .chip{width:22px;height:14px;border-radius:2px;display:inline-block;flex:0 0 auto}
+  .chip.known{background:var(--card);border:1px solid var(--hair)}
+  .chip.you{background:#f6e7e1;border:1.5px solid var(--oxblood)}
+  .chip.gap{background:repeating-linear-gradient(45deg,#f6ece8,#f6ece8 4px,#efdcd5 4px,#efdcd5 8px);border:1.5px dashed var(--oxblood)}
+  .chip.step{background:var(--card);border:1.5px dotted var(--pine-soft)}
+  .chip.dec{background:var(--card);border:1px solid var(--hair);position:relative}
+  .chip.dec::after{content:"";position:absolute;left:3px;top:6px;width:7px;height:1.5px;background:var(--ink)}
+
+  /* ---------- Section headers ---------- */
+  .sec{margin-top:64px}
+  .sec-head{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--hair);padding-bottom:9px;margin-bottom:30px}
+  .sec-num{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--oxblood);font-weight:600;letter-spacing:.1em}
+  .sec h2{font-size:clamp(21px,3.2vw,30px);font-weight:500;margin:0;letter-spacing:-.01em}
+  .sec-note{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--faded);max-width:34ch;text-align:right;line-height:1.45}
+
+  /* ====================================================
+     CORE PEDIGREE  — CSS org-chart, root = you, descending into ancestry
+     ==================================================== */
+  .tree-scroll{overflow-x:auto;padding:6px 2px 18px;-webkit-overflow-scrolling:touch}
+  .tree{display:flex;justify-content:center;min-width:760px}
+  .tree ul{display:flex;justify-content:center;padding-top:26px;position:relative;margin:0;list-style:none}
+  .tree li{display:flex;flex-direction:column;align-items:center;position:relative;padding:26px 8px 0;list-style:none}
+  /* connectors */
+  .tree li::before,.tree li::after{content:"";position:absolute;top:0;width:50%;height:26px;border-top:1.5px solid var(--pine-soft)}
+  .tree li::before{right:50%;border-right:1.5px solid var(--pine-soft)}
+  .tree li::after{left:50%}
+  .tree li:only-child::before,.tree li:only-child::after{display:none}
+  .tree li:first-child::before,.tree li:last-child::after{border:0}
+  .tree li:last-child::before{border-right:1.5px solid var(--pine-soft)}
+  .tree>ul>li{padding-top:0}
+  .tree>ul>li::before,.tree>ul>li::after{display:none}
+  .tree ul ul::before{content:"";position:absolute;top:0;left:50%;height:26px;border-left:1.5px solid var(--pine-soft)}
+
+  /* node card */
+  .node{position:relative;background:var(--card);border:1px solid var(--hair);border-radius:7px;
+        padding:9px 13px;min-width:138px;max-width:165px;text-align:center;box-shadow:0 1px 0 var(--shadow)}
+  .node .nm{font-size:15px;line-height:1.18;font-weight:500}
+  .node .rl{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--pine-soft);margin-bottom:3px}
+  .node .dt{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--faded);margin-top:3px}
+  .node .pl{font-size:11px;color:var(--faded);font-style:italic;margin-top:1px}
+  .node.you{border:1.5px solid var(--oxblood);background:#f7e9e3}
+  .node.you .rl{color:var(--oxblood)}
+  .node.gap{border:1.5px dashed var(--oxblood);background:repeating-linear-gradient(45deg,#f7efeb,#f7efeb 5px,#f1e1da 5px,#f1e1da 10px)}
+  .node.gap .nm{color:var(--oxblood)}
+  .node.gap .q{font-size:22px;font-weight:300;color:var(--oxblood);line-height:1}
+  .node.dec::after{content:"✝";position:absolute;top:5px;right:8px;font-size:10px;color:var(--pine-soft)}
+  .couple-tag{font-family:"IBM Plex Mono",monospace;font-size:9px;color:var(--gold);letter-spacing:.1em;margin:6px 0 -6px}
+
+  /* sibling root card holds two people */
+  .root-card{background:#f7e9e3;border:1.5px solid var(--oxblood);border-radius:8px;padding:10px 14px;display:flex;gap:18px;align-items:stretch}
+  .root-card .who{text-align:center}
+  .root-card .who+.who{border-left:1px solid var(--hair);padding-left:18px}
+
+  .genband{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--pine);text-align:center;margin:30px 0 -8px;opacity:.85}
+
+  /* ====================================================
+     GROUP / HOUSEHOLD CARDS
+     ==================================================== */
+  .households{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+  .house{background:var(--card);border:1px solid var(--hair);border-radius:10px;padding:22px 22px 20px;box-shadow:0 1px 2px var(--shadow)}
+  .house h3{margin:0 0 2px;font-size:19px;font-weight:500}
+  .house .line{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--pine-soft);letter-spacing:.04em}
+  .couple{display:flex;gap:12px;margin:14px 0 6px;padding-bottom:14px;border-bottom:1px dotted var(--hair)}
+  .person{flex:1}
+  .person .pn{font-size:15.5px;font-weight:500;line-height:1.2}
+  .person .pd{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--faded);margin-top:2px}
+  .person .px{font-size:12px;color:var(--faded);font-style:italic;margin-top:2px}
+  .ampersand{align-self:center;color:var(--gold);font-style:italic;font-size:18px}
+  .kids-label{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--pine-soft);margin:12px 0 7px}
+  .kids{display:flex;flex-direction:column;gap:7px}
+  .kid{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 9px;padding:6px 10px;border-radius:6px;background:var(--paper-2);border:1px solid transparent}
+  .kid .kn{font-size:14px;font-weight:500;flex:1 1 auto;min-width:130px;white-space:nowrap}
+  .kid .kd{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--faded);white-space:nowrap;margin-left:auto}
+  .kid.is-parent{background:#f3e4dd;border:1px solid var(--oxblood)}
+  .kid.is-parent .kn{color:var(--oxblood)}
+  .kid .tag{font-family:"IBM Plex Mono",monospace;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--oxblood);flex:0 0 auto}
+  .kid .grandkids{flex:1 1 100%;font-size:12px;color:var(--faded);font-style:italic;padding-left:2px;margin-top:1px}
+  .step-note{margin-top:14px;font-size:12.5px;color:var(--faded);border-left:2px dotted var(--pine-soft);padding-left:11px;line-height:1.45}
+
+  /* ====================================================
+     TAPROOT — deep Renton line
+     ==================================================== */
+  .roots{position:relative;margin-top:14px}
+  .root-intro{max-width:64ch;color:var(--faded);font-size:14.5px;margin:0 0 26px}
+  .taproot{position:relative;padding-left:40px}
+  .taproot::before{content:"";position:absolute;left:14px;top:6px;bottom:30px;width:2px;
+    background:linear-gradient(var(--pine),var(--pine-soft) 70%, transparent)}
+  .gen{position:relative;margin-bottom:20px}
+  .gen::before{content:"";position:absolute;left:-26px;top:9px;width:11px;height:11px;border-radius:50%;
+    background:var(--paper);border:2px solid var(--pine)}
+  .gen.tip::before{background:var(--pine)}
+  .gen .yr{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--pine-soft);letter-spacing:.05em}
+  .gen .deg{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+  .gen .pair{display:flex;flex-wrap:wrap;gap:5px 22px;margin-top:3px}
+  .gen .m,.gen .f{font-size:15px}
+  .gen .f{font-weight:500}
+  .gen .m{color:var(--faded)}
+  .gen .meta{font-size:12px;color:var(--faded);font-style:italic}
+  .gen.unknown .f{color:var(--oxblood)}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:40px}
+
+  /* ====================================================
+     PEDIGREE — indented ancestor lists (maternal Day lines)
+     ==================================================== */
+  .linehead{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:26px 0 4px}
+  .linesub{font-size:13px;color:var(--faded);font-style:italic;margin:0 0 14px;max-width:70ch}
+  .ped,.ped ul{list-style:none;margin:0;padding:0}
+  .ped ul{padding-left:18px}
+  .ped li{position:relative;padding-left:17px;margin:7px 0}
+  .ped li::before{content:"";position:absolute;left:3px;top:0;bottom:0;border-left:1px solid var(--hair)}
+  .ped li:last-child::before{height:11px}
+  .ped li::after{content:"";position:absolute;left:3px;top:11px;width:11px;border-top:1px solid var(--hair)}
+  .ped > li{padding-left:0}
+  .ped > li::before,.ped > li::after{display:none}
+  .anc .a{font-size:14.5px;font-weight:500}
+  .anc .eq{color:var(--gold);font-style:italic;margin:0 5px}
+  .anc .s{font-size:14px;color:var(--faded)}
+  .anc .m2{display:block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--faded);margin-top:1px;line-height:1.45}
+  .anc .mm{color:var(--pine-soft)}
+  li.direct > .anc .a{color:var(--pine)}
+  .anc.solo .a{font-weight:500}
+  .ped .unkn{color:var(--oxblood);font-style:italic}
+  .crewk{margin-top:8px;background:var(--card);border:1px solid var(--hair);border-radius:10px;padding:18px 22px}
+
+  /* ====================================================
+     GAPS CHECKLIST
+     ==================================================== */
+  .gaps{background:#f7ece8;border:1.5px solid #e3c6bd;border-radius:10px;padding:24px 26px}
+  .gaps h2{color:var(--oxblood)}
+  .gaplist{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:13px 28px}
+  .gaplist li{position:relative;padding-left:26px;font-size:14px;line-height:1.4}
+  .gaplist li::before{content:"";position:absolute;left:0;top:2px;width:14px;height:14px;border:1.5px solid var(--oxblood);border-radius:3px;background:#fff}
+  .gaplist li b{font-weight:600}
+  .gaplist li .side{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--pine-soft);display:block;margin-bottom:1px}
+
+  /* ====================================================
+     SOURCES
+     ==================================================== */
+  .sources{font-size:13.5px;color:var(--faded);line-height:1.6}
+  .sources li{margin-bottom:7px}
+  .sources b{color:var(--ink);font-weight:600}
+  footer{margin-top:70px;border-top:1px solid var(--hair);padding-top:18px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--pine-soft);letter-spacing:.03em;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+  a{color:var(--oxblood)}
+
+  @media (max-width:720px){
+    .households,.twocol,.gaplist{grid-template-columns:1fr}
+    .sec-note{display:none}
+  }
+
+  @media (prefers-reduced-motion:no-preference){
+    .reveal{opacity:0;transform:translateY(10px);animation:rise .7s ease forwards}
+    @keyframes rise{to{opacity:1;transform:none}}
+  }
+
+  @media print{
+    body{background:#fff}
+    .wrap{max-width:none;padding:0}
+    .tree-scroll{overflow:visible}
+    .tree{min-width:0;transform:scale(.6);transform-origin:top center}
+    .sec{break-inside:avoid;margin-top:34px}
+    .house,.gen,.gaps{break-inside:avoid}
+    .reveal{opacity:1!important;transform:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ================= MASTHEAD ================= -->
+  <header class="mast reveal">
+    <div class="eyebrow">A working family record · begun June 2026</div>
+    <h1>The Renton <em>&amp;</em> Holt<br>Family Tree</h1>
+    <p class="sub">Four generations of your direct line, branching back to the 1500s on the Yorkshire Renton side, to 1830s Molise on the Italian side, and — newly opened by Geoff's charts — to the 1600s–1700s across your mother's Day family. The Holt branch is now the main frontier left to explore; blanks are marked, not hidden, so you can fill them in over time.</p>
+    <div class="provenance">Compiled from: the <em>Valenté Family Tree</em> research dossier · <em>Geoffrey Day's family charts</em> (the Day, Holman &amp; Cottle lines) and the Frederick &amp; Doris record · Kevin Holt's order of service (2026) · Ronnie &amp; Audrey Renton memorial cards (2013 / 2016) · Yorkshire Evening Post, 18 May 2012 · and your own notes.</div>
+  </header>
+
+  <div class="legend reveal">
+    <span><i class="chip you"></i> You / your direct line</span>
+    <span><i class="chip known"></i> Recorded</span>
+    <span><i class="chip gap"></i> Unknown — to research</span>
+    <span><i class="chip step"></i> Step / by remarriage</span>
+    <span><i class="chip dec"></i> ✝ Deceased</span>
+  </div>
+
+  <!-- ================= SECTION 1 — CORE PEDIGREE ================= -->
+  <section class="sec reveal">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2>Your direct line, to great-grandparents</h2>
+      <div class="sec-note">Read top-down: each row steps one generation further back. Dashed cards are blanks to fill.</div>
+    </div>
+
+    <div class="genband">You &amp; your sister</div>
+    <div class="tree-scroll">
+      <div class="tree">
+        <ul>
+          <li>
+            <!-- ROOT: you + Claire -->
+            <div class="root-card">
+              <div class="who">
+                <div class="rl" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--oxblood)">You</div>
+                <div class="nm" style="font-size:15px;font-weight:500">Luke Antony Renton</div>
+                <div class="dt mono" style="font-size:10.5px;color:var(--faded)">b. 18 Mar 1988</div>
+              </div>
+              <div class="who">
+                <div class="rl" style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--pine-soft)">Sister ✝</div>
+                <div class="nm" style="font-size:15px;font-weight:500">Claire Elizabeth Renton</div>
+                <div class="dt mono" style="font-size:10.5px;color:var(--faded)">1984 – 2025</div>
+              </div>
+            </div>
+
+            <ul>
+              <!-- PARENTS -->
+              <li>
+                <div class="node">
+                  <div class="rl">Father</div>
+                  <div class="nm">Christopher Paul Renton</div>
+                  <div class="dt">b. 25 Nov 1964 · Leeds</div>
+                </div>
+                <ul>
+                  <!-- PATERNAL GRANDPARENTS -->
+                  <li>
+                    <div class="node dec">
+                      <div class="rl">Grandfather</div>
+                      <div class="nm">Ronald “Ronnie” Renton</div>
+                      <div class="dt">1933 – 2016</div>
+                    </div>
+                    <ul>
+                      <li>
+                        <div class="node dec">
+                          <div class="rl">Gt-grandfather</div>
+                          <div class="nm">Stanley Renton</div>
+                          <div class="dt">1895 – 1967</div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="node dec">
+                          <div class="rl">Gt-grandmother</div>
+                          <div class="nm">Beatrice Bloomfield</div>
+                          <div class="dt">1900 – 1994</div>
+                        </div>
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    <div class="node dec">
+                      <div class="rl">Grandmother</div>
+                      <div class="nm">Audrey M. Renton</div>
+                      <div class="dt">née Valentine · 1932 – 2013</div>
+                    </div>
+                    <ul>
+                      <li>
+                        <div class="node gap">
+                          <div class="rl">Gt-grandfather</div>
+                          <div class="q">?</div>
+                          <div class="nm" style="font-size:13px">Valente / Valentine</div>
+                          <div class="dt">unknown — see note ★</div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="node dec">
+                          <div class="rl">Gt-grandmother</div>
+                          <div class="nm">Maria “Nancy” Martino</div>
+                          <div class="dt">1894 – 1978</div>
+                        </div>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+
+              <!-- MOTHER -->
+              <li>
+                <div class="node">
+                  <div class="rl">Mother</div>
+                  <div class="nm">Amanda Jayne Holt</div>
+                  <div class="dt">later Renton, then Carter · b. 2 Dec 1964</div>
+                </div>
+                <ul>
+                  <!-- MATERNAL GRANDPARENTS -->
+                  <li>
+                    <div class="node dec">
+                      <div class="rl">Grandfather</div>
+                      <div class="nm">Tony Holt</div>
+                      <div class="dt">d. c. 1988–89</div>
+                    </div>
+                    <ul>
+                      <li>
+                        <div class="node gap">
+                          <div class="rl">Gt-grandfather</div>
+                          <div class="q">?</div>
+                          <div class="nm" style="font-size:13px">Holt</div>
+                          <div class="dt">unknown</div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="node gap">
+                          <div class="rl">Gt-grandmother</div>
+                          <div class="q">?</div>
+                          <div class="nm" style="font-size:13px">Holt</div>
+                          <div class="dt">unknown</div>
+                        </div>
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    <div class="node">
+                      <div class="rl">Grandmother</div>
+                      <div class="nm">Betty Day</div>
+                      <div class="dt">b. 3 Nov 1936 · later Holt, then Horton</div>
+                    </div>
+                    <ul>
+                      <li>
+                        <div class="node dec">
+                          <div class="rl">Gt-grandfather</div>
+                          <div class="nm">Frederick Day</div>
+                          <div class="dt">1905 – 1982 · iron moulder</div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="node dec">
+                          <div class="rl">Gt-grandmother</div>
+                          <div class="nm">Doris Catherine Day</div>
+                          <div class="dt">1908 – 1981</div>
+                        </div>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <p style="font-size:12.5px;color:var(--faded);font-style:italic;margin-top:6px">★ Audrey's surname was Valentine, so her father was a Valente. The dossier records her mother Maria as “widowed 1926,” which can't be reconciled with Audrey's 1932 birth — Audrey's father is the first real puzzle to solve.</p>
+  </section>
+
+  <!-- ================= SECTION 2 — HOUSEHOLDS ================= -->
+  <section class="sec reveal">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2>Your grandparents' households</h2>
+      <div class="sec-note">Your parents' brothers and sisters — your aunts, uncles and first cousins — plus your grandma Betty's own birth family.</div>
+    </div>
+
+    <div class="households">
+      <!-- Paternal -->
+      <div class="house">
+        <h3>Renton — paternal</h3>
+        <div class="line">Leeds · married 17 May 1952, St Anne &amp; St Agnes</div>
+        <div class="couple">
+          <div class="person">
+            <div class="pn">Ronald “Ronnie” Renton ✝</div>
+            <div class="pd">8 Mar 1933 – 21 Aug 2016</div>
+            <div class="px">Leeds publican — kept The Middleton Arms &amp; The Sportsman</div>
+          </div>
+          <div class="ampersand">&amp;</div>
+          <div class="person">
+            <div class="pn">Audrey Valentine ✝</div>
+            <div class="pd">1932 – 15 Apr 2013</div>
+            <div class="px">machinist; renewed vows after 60 years, 2012</div>
+          </div>
+        </div>
+        <div class="kids-label">Their eight children</div>
+        <div class="kids">
+          <div class="kid"><span class="kn">Ronald “Ronnie” jr.</span><span class="kd">b. 5 May 1953</span></div>
+          <div class="kid"><span class="kn">Barbara</span><span class="kd">b. 17 May 1954</span></div>
+          <div class="kid"><span class="kn">Stanley ✝</span><span class="kd">1957 – 1972</span></div>
+          <div class="kid"><span class="kn">Deborah</span><span class="kd">b. 14 Oct 1959</span></div>
+          <div class="kid"><span class="kn">Susan</span><span class="kd">b. 2 May 1961</span></div>
+          <div class="kid is-parent"><span class="kn">Christopher Paul</span><span class="tag">your dad</span><span class="kd">b. 25 Nov 1964</span></div>
+          <div class="kid"><span class="kn">Desmond ✝</span><span class="kd">1972 – 1996</span></div>
+          <div class="kid"><span class="kn">Amanda (Willetts)</span><span class="kd">b. 8 Oct 1974</span></div>
+        </div>
+      </div>
+
+      <!-- Maternal -->
+      <div class="house">
+        <h3>Holt — maternal</h3>
+        <div class="line">much still to research</div>
+        <div class="couple">
+          <div class="person">
+            <div class="pn">Tony Holt ✝</div>
+            <div class="pd">d. c. 1988–1989</div>
+            <div class="px">Betty's first husband</div>
+          </div>
+          <div class="ampersand">&amp;</div>
+          <div class="person">
+            <div class="pn">Betty Day</div>
+            <div class="pd">b. 3 Nov 1936 · later Holt, then Horton</div>
+            <div class="px">daughter of Frederick &amp; Doris Day (below)</div>
+          </div>
+        </div>
+        <div class="kids-label">Their three children</div>
+        <div class="kids">
+          <div class="kid">
+            <span class="kn">Kevin Holt ✝</span><span class="kd">14 May 1960 – 5 May 2026</span>
+            <span class="grandkids">wife: Gail · children: Jake &amp; Joseph Holt</span>
+          </div>
+          <div class="kid is-parent"><span class="kn">Amanda Jayne Holt</span><span class="tag">your mum</span><span class="kd">b. 2 Dec 1964</span></div>
+          <div class="kid">
+            <span class="kn">Julian Holt</span><span class="kd">dates to add</span>
+            <span class="grandkids">partner: Donna Mellor · children: Nathan Mellor (adopted), Toni &amp; Joshua Holt</span>
+          </div>
+        </div>
+        <div class="step-note">Betty later remarried <b>Gary Horton</b> (d. c. 2005) — your step-grandfather. Your mum also remarried, to <b>Chris Carter</b>.</div>
+      </div>
+
+      <!-- Betty's birth family — full width -->
+      <div class="house" style="grid-column:1 / -1">
+        <h3>Day — Betty's birth family</h3>
+        <div class="line">Leeds · married 30 July 1932, Leeds Register Office · home at 22 Sissons Road, Middleton</div>
+        <div class="couple">
+          <div class="person">
+            <div class="pn">Frederick Day ✝</div>
+            <div class="pd">11 Dec 1905 – 8 Feb 1982</div>
+            <div class="px">iron moulder (heavy work) &amp; wartime ARP warden; born 21 Howard Street, West Leeds</div>
+          </div>
+          <div class="ampersand">&amp;</div>
+          <div class="person">
+            <div class="pn">Doris Catherine Day ✝</div>
+            <div class="pd">29 Feb 1908 – 16 May 1981</div>
+            <div class="px">a leap-day baby, born in Doncaster; ticket printer before marriage</div>
+          </div>
+        </div>
+        <div class="kids-label">Their seven children — your grandma &amp; her brothers and sisters</div>
+        <div class="kids" style="display:grid;grid-template-columns:1fr 1fr;gap:7px 16px">
+          <div class="kid"><span class="kn">June Catherine</span><span class="kd">b. 26 Jun 1933</span></div>
+          <div class="kid is-parent"><span class="kn">Betty</span><span class="tag">your grandma</span><span class="kd">b. 3 Nov 1936</span></div>
+          <div class="kid"><span class="kn">Dorothy Ann</span><span class="kd">b. 9 Jun 1940</span></div>
+          <div class="kid"><span class="kn">Frederick</span><span class="kd">b. 13 Mar 1942</span></div>
+          <div class="kid"><span class="kn">Edwin</span><span class="kd">b. 9 Feb 1945</span></div>
+          <div class="kid"><span class="kn">Geoffrey</span><span class="tag">told the story</span><span class="kd">b. 27 Jan 1947</span></div>
+          <div class="kid"><span class="kn">Margaret</span><span class="kd">b. 21 Dec 1951</span></div>
+        </div>
+        <div class="step-note">Frederick was first married to <b>Annie Smith</b> (1925); she died in 1930, possibly with an infant daughter Mary. He married Doris — a widower at 27 — in 1932, and all seven children above are from that marriage. Both of Betty's parents were born <b>Day</b>, though from quite separate families (a Leeds Day line and an Isle-of-Wight one) — see the two lineages in §04.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SECTION 3 — DEEP ROOTS ================= -->
+  <section class="sec reveal">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2>Deep roots on your father's side</h2>
+      <div class="sec-note">Beyond great-grandparents — bonus depth already done in the dossier.</div>
+    </div>
+
+    <div class="twocol">
+      <!-- Renton taproot -->
+      <div>
+        <p class="root-intro"><b>The Renton line — Yorkshire.</b> A direct father-to-father chain back eleven generations to about 1560, where parish records begin. Family origin recorded as <em>Lofthouse</em> and <em>Kirkby Overblow</em>.</p>
+        <div class="taproot">
+          <div class="gen tip"><span class="deg">Gt-grandfather</span><div class="pair"><span class="f">Stanley Renton</span><span class="m">&amp; mother — unknown</span></div><div class="meta">b. 15 Feb 1895 · d. 1967</div></div>
+          <div class="gen unknown"><span class="deg">2× great</span><div class="pair"><span class="f">Walter Winstanley Renton</span></div><div class="meta">1871 Beeston Hill, Holbeck – 1895 · m. 1894</div></div>
+          <div class="gen"><span class="deg">3× great</span><div class="pair"><span class="f">Edward Renton</span><span class="m">&amp; Eliza Ann Winstanley</span></div><div class="meta">Edward b. 1846 Otley · Eliza b. 1848 Manchester</div></div>
+          <div class="gen"><span class="deg">4× great</span><div class="pair"><span class="f">John Renton</span><span class="m">&amp; Grace Rawson</span></div><div class="meta">John 1795 Farnley – 1874 Leathley · m. 1828 Otley</div></div>
+          <div class="gen"><span class="deg">5× great</span><div class="pair"><span class="f">John Renton</span><span class="m">&amp; Mary Clayton</span></div><div class="meta">John 1750 – 1831 Leathley · m. 1793 Otley</div></div>
+          <div class="gen"><span class="deg">6× great</span><div class="pair"><span class="f">Albaney Renton</span><span class="m">&amp; Mary</span></div><div class="meta">Albaney 1721 – 1779</div></div>
+          <div class="gen"><span class="deg">7× great</span><div class="pair"><span class="f">John Renton</span><span class="m">&amp; Mary Harper</span></div><div class="meta">John 1671 – 1757</div></div>
+          <div class="gen"><span class="deg">8× great</span><div class="pair"><span class="f">Thomas Renton</span><span class="m">&amp; Anne Wardrop</span></div><div class="meta">Thomas 1644 – 1722</div></div>
+          <div class="gen"><span class="deg">9× great</span><div class="pair"><span class="f">Christopher Renton</span><span class="m">&amp; Katherine</span></div><div class="meta">1617 – 1678</div></div>
+          <div class="gen"><span class="deg">10× great</span><div class="pair"><span class="f">Christopher Renton</span><span class="m">&amp; Isabel Scarborough</span></div><div class="meta">b. c. 1580</div></div>
+          <div class="gen"><span class="deg">11× great</span><div class="pair"><span class="f">Christopher Renton</span></div><div class="meta">b. c. 1560 · start of official records</div></div>
+        </div>
+      </div>
+
+      <!-- Italian line -->
+      <div>
+        <p class="root-intro"><b>The Martino line — Italy.</b> Audrey's mother's family: travelling musicians and ice-cream vendors who came from Molise to Yorkshire. Names carry old spelling variants, so several entries are marked uncertain.</p>
+        <div class="taproot">
+          <div class="gen tip"><span class="deg">Gt-grandmother</span><div class="pair"><span class="f">Maria “Nancy” Annunziata Martino</span></div><div class="meta">b. 14 Dec 1894 Tadcaster – d. 6 Jul 1978 Leeds · m. Valente, widowed 1926; later m. Palmerino Carconi 1949</div></div>
+          <div class="gen"><span class="deg">2× great</span><div class="pair"><span class="f">Carminucci (Carmen) Martino</span><span class="m">&amp; Maria Vincensa D. Annonio</span></div><div class="meta">Carmen b. 1867 Abruzzi – d. 1899 York (aged 33), musician / ice-cream vendor · m. 1887</div></div>
+          <div class="gen"><span class="deg">3× great</span><div class="pair"><span class="f">Giuseppe Martino</span><span class="m">&amp; Dominica Quaglia (?)</span></div><div class="meta">Giuseppe b. 1831 Castellone, Molise – d. 1921 Darlington, musician</div></div>
+          <div class="gen unknown"><span class="deg">3× great</span><div class="pair"><span class="f">Pietro Annonio</span><span class="m">&amp; mother — unknown</span></div><div class="meta">b. 1839 – d. 1903, farmer</div></div>
+        </div>
+        <div class="step-note" style="margin-top:18px">By her second marriage Maria wed <b>Palmerino “Peter” Carconi</b> (1886 Palanzo, nr Milan – 1967 Leeds, a marble polisher; his father John Carcone). He's a <b>step</b>-ancestor — not a blood relative — but appears throughout the family photos.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SECTION 4 — MATERNAL DEEP ROOTS ================= -->
+  <section class="sec reveal">
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <h2>Deep roots on your mother's side — the Day lines</h2>
+      <div class="sec-note">From Geoff's charts. Both of Betty's parents were Days, from two separate families.</div>
+    </div>
+    <p class="root-intro">Geoff's research opens up the whole maternal Day side, which was blank until now. It runs back through the wool towns of the West Riding on <b>Frederick</b>'s side, and through Somerset, the Isle of Wight and Northamptonshire on <b>Doris</b>'s. Read each list top-down: indented names are the parents of the name above. Direct surname lines are inked in green; “solo” names are where only one parent was recorded.</p>
+
+    <!-- ===== Frederick Day's line ===== -->
+    <div class="linehead">Frederick Day's line · Leeds &amp; the West Riding</div>
+    <p class="linesub">Behind your great-grandfather <b>Frederick Day</b> (1905–1982): generations of Leeds spindle-makers, stuff-pressers and wool spinners, with a Welsh tailoring family (the Lloyds and Owens) and a Horbury weaving family (the Pickersgills) marrying in.</p>
+    <ul class="ped">
+      <li class="direct">
+        <div class="anc"><span class="a">Charles Henry Day</span><span class="eq">&amp;</span><span class="s">Elizabeth Hardaker</span><span class="m2">Charles 1872–1927, Leeds, spindle maker · Elizabeth b. 1876, Leeds · <span class="mm">m. 26 Dec 1896, St Philip's, Leeds</span></span></div>
+        <ul>
+          <li class="direct">
+            <div class="anc"><span class="a">Alfred Day</span><span class="eq">&amp;</span><span class="s">Mary Ann Lloyd</span><span class="m2">Alfred 1830–1899, Leeds · Mary Ann 1829–1909, Welshpool · <span class="mm">m. 11 Mar 1850, Leeds Parish Church</span></span></div>
+            <ul>
+              <li class="direct">
+                <div class="anc"><span class="a">John Day</span><span class="eq">&amp;</span><span class="s">Mary Ann Broadley</span><span class="m2">John 1801–1831, Leeds, stuff presser · <span class="mm">m. 23 Mar 1825, Leeds</span></span></div>
+                <ul>
+                  <li>
+                    <div class="anc"><span class="a">Simeon Day</span><span class="eq">&amp;</span><span class="s">Mary Ann Pickard</span><span class="m2">Simeon 1768–1829, Leeds · Mary Ann 1768–1806, Hunslet · <span class="mm">m. 17 Jul 1791, Leeds</span></span></div>
+                    <ul>
+                      <li><div class="anc"><span class="a">Samuel Day</span><span class="eq">&amp;</span><span class="s">Martha Barrowclough</span><span class="m2">Samuel c.1724–1776, Horbury then Leeds · Martha c.1731–1813, Horbury · <span class="mm">m. 6 Sep 1756, Leeds</span></span></div></li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <div class="anc"><span class="a">John Lloyd</span><span class="eq">&amp;</span><span class="s">Margaret Owen</span><span class="m2">John 1791–1839, Guilsfield, tailor · Margaret 1797–1873, Wales · <span class="mm">m. 9 Dec 1818, Welshpool</span></span></div>
+                <ul>
+                  <li><div class="anc solo"><span class="a">John Lloyd</span><span class="eq">&amp;</span><span class="s">Margaret Bate</span><span class="m2">John b. 1786 · <span class="mm">m. 21 Feb 1797, Wales</span> — note: this marriage date sits oddly before the 1791 birth above, a slip somewhere in the original chart</span></span></div></li>
+                  <li>
+                    <div class="anc"><span class="a">David Owen</span><span class="eq">&amp;</span><span class="s">Ann Jeffreys</span><span class="m2">Ann b. 1772, Wales · <span class="mm">m. 1 Nov 1795, Wales</span></span></div>
+                    <ul>
+                      <li><div class="anc solo"><span class="a">Thomas Jeffreys</span><span class="eq">&amp;</span><span class="s">Elizabeth</span></div></li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li>
+            <div class="anc"><span class="a">Edwin Hardaker</span><span class="eq">&amp;</span><span class="s">Mary Louisa Shaw</span><span class="m2">Edwin 1848–1917, Leeds, mechanic · Mary Louisa 1854–1920, Burley · <span class="mm">m. 2 Aug 1873, St Stephen's, Kirkstall</span></span></div>
+            <ul>
+              <li>
+                <div class="anc"><span class="a">Henry Hardaker</span><span class="eq">&amp;</span><span class="s">Elizabeth Pickersgill</span><span class="m2">Henry 1828–1901, Leeds, wool spinner · Elizabeth 1828–1903, Horbury · <span class="mm">m. 5 Apr 1846, Leeds</span></span></div>
+                <ul>
+                  <li>
+                    <div class="anc"><span class="a">William Hardaker</span><span class="eq">&amp;</span><span class="s">Mary Tyas</span><span class="m2">William 1786 – 1855/60, Bramley, wool spinner · Mary 1796–1871, Chapel Allerton · <span class="mm">m. 1 Sep 1821, Leeds</span></span></div>
+                    <ul>
+                      <li><div class="anc"><span class="a">John Tyas</span><span class="eq">&amp;</span><span class="s">Catherine Barnard</span><span class="m2">both b. c.1757 · John d. 1839, Chapel Allerton · Catherine d. 1811 · <span class="mm">m. 19 Sep 1790, Leeds</span></span></div></li>
+                    </ul>
+                  </li>
+                  <li>
+                    <div class="anc"><span class="a">Jesse Pickersgill</span><span class="eq">&amp;</span><span class="s">Mary Atkinson</span><span class="m2">Jesse 1804–1868, Horbury, cloth weaver · Mary 1804–1873, Horbury · <span class="mm">m. 24 Jul 1825, Wakefield</span></span></div>
+                    <ul>
+                      <li><div class="anc"><span class="a">Geo Pickersgill</span><span class="eq">&amp;</span><span class="s">Elizabeth Beaumont</span><span class="m2">George c.1774–1828, Horbury · Elizabeth b. c.1775 · <span class="mm">m. 5 Apr 1802, Horbury</span></span></div></li>
+                      <li><div class="anc"><span class="a">Jonas Atkinson</span><span class="eq">&amp;</span><span class="s">Becca Eastwood</span><span class="m2">Jonas 1779–1851, Horbury · Becca 1780–1820, Horbury · <span class="mm">m. 31 Mar 1799, Horbury</span></span></div></li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <div class="anc solo"><span class="a">Ellen Shaw</span><span class="m2">1836, Preston – 1862, Leeds · Mary Louisa's mother; <span class="unkn">no father named on the birth certificate</span></span></div>
+                <ul>
+                  <li>
+                    <div class="anc"><span class="a">Francis Shaw</span><span class="eq">&amp;</span><span class="s">Mary Buckley</span><span class="m2">Francis c.1804–1849, Lancashire, bleacher · Mary 1805–1875, Headingley, charwoman · <span class="mm">m. 11 May 1828, Leeds</span></span></div>
+                    <ul>
+                      <li><div class="anc"><span class="a">William Shaw</span><span class="eq">&amp;</span><span class="s">Hannah</span><span class="m2">William b. 1780, Lancashire · Hannah b. c.1785</span></div></li>
+                      <li><div class="anc solo"><span class="a">John Buckle</span></div></li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ul>
+
+    <!-- ===== Doris Catherine Day's line ===== -->
+    <div class="linehead" style="margin-top:38px">Doris Catherine Day's line · Crewkerne, the Isle of Wight &amp; Northamptonshire</div>
+    <p class="linesub">Behind your great-grandmother <b>Doris Catherine Day</b> (1908–1981): a Somerset weaving family (Holman) that moved to the Isle of Wight and married into an island family of sail-makers and bakers (Day, Gladdis), joined to a Northamptonshire farming family (Bucknell, Bazeley). The surname “Day” reaches Doris through the Isle-of-Wight line — quite separate from Frederick's Leeds Days.</p>
+    <ul class="ped">
+      <li class="direct">
+        <div class="anc"><span class="a">Edsell John Holman Day</span><span class="eq">&amp;</span><span class="s">Alice Elizabeth Bucknell</span><span class="m2">Edsell 1873–1922, West Cowes IoW then Leeds, soldier &amp; general labourer · Alice 1876–1954, Flore then Leeds · <span class="mm">m. 31 Jul 1915, Leeds Register Office</span> (their children, Doris among them, were born before the marriage)</span></div>
+        <ul>
+          <li class="direct">
+            <div class="anc"><span class="a">John Holman</span><span class="eq">&amp;</span><span class="s">Eliza Mary Ann Day</span><span class="m2">John 1832, Crewkerne – 1901, Isle of Wight, tailor · Eliza 1840, Jersey – 1878, IoW · <span class="mm">m. 27 Sep 1860, Northwood, IoW</span></span></div>
+            <ul>
+              <li>
+                <div class="anc"><span class="a">Samuel Holman</span><span class="eq">&amp;</span><span class="s">Sarah Cottel</span><span class="m2">Samuel 1789–1860, Crewkerne, ag. labourer &amp; weaver · Sarah 1791–1870, Crewkerne · <span class="mm">m. 11 Aug 1813, Crewkerne</span> — their deeper Crewkerne ancestry is in the box below</span></div>
+              </li>
+              <li>
+                <div class="anc"><span class="a">Edsell John Day</span><span class="eq">&amp;</span><span class="s">Eliza Gladdis</span><span class="m2">Edsell c.1820–1880, Isle of Wight, baker · Eliza 1820–1889, IoW · <span class="mm">m. 14 Apr 1839, Isle of Wight</span></span></div>
+                <ul>
+                  <li>
+                    <div class="anc"><span class="a">Robert Gladdis</span><span class="eq">&amp;</span><span class="s">Ruth Dyer</span><span class="m2">Robert 1788–1868, IoW, sail maker · Ruth 1789–1875, IoW · <span class="mm">m. 1809, Isle of Wight</span></span></div>
+                    <ul>
+                      <li><div class="anc solo"><span class="a">James Gladdess</span></div></li>
+                      <li><div class="anc solo"><span class="a">Richard Dyer</span></div></li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li>
+            <div class="anc"><span class="a">Thomas Bucknell</span><span class="eq">&amp;</span><span class="s">Harriet Bazeley</span><span class="m2">Thomas 1857, Dodford – 1936, York, labourer &amp; brewer · Harriet 1858, Flore – 1909, York · <span class="mm">m. 27 Feb 1876, Flore</span></span></div>
+            <ul>
+              <li>
+                <div class="anc"><span class="a">William Bucknell</span><span class="eq">&amp;</span><span class="s">Ann Bowers</span><span class="m2">William 1799–1882, Dodford, labourer (deaf &amp; dumb) · Ann 1821–1873, Gayton · <span class="mm">m. 25 Sep 1853, Dodford</span></span></div>
+                <ul>
+                  <li>
+                    <div class="anc"><span class="a">Thomas Bucknell</span><span class="eq">&amp;</span><span class="s">Ann Dunckley</span><span class="m2">Thomas c.1762–1850, Daventry · Ann 1769, Newnham – 1852, Daventry · <span class="mm">m. 1792, Flore</span></span></div>
+                    <ul>
+                      <li><div class="anc"><span class="a">Robert Dunkley</span><span class="eq">&amp;</span><span class="s">Mary George</span><span class="m2">Robert c.1730–1818 · Mary 1745–1822 · <span class="mm">m. 28 Oct 1768, Newnham</span></span></div></li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <div class="anc"><span class="a">Thomas Bazeley</span><span class="eq">&amp;</span><span class="s">Harriet Auld</span><span class="m2">Thomas 1822–1873, Flore, ag. labourer · Harriet 1822, Heyford – 1888, Flore · <span class="mm">m. 27 Sep 1842, Flore</span></span></div>
+                <ul>
+                  <li>
+                    <div class="anc"><span class="a">Thomas Bazeley</span><span class="eq">&amp;</span><span class="s">Hannah Rogers</span><span class="m2">Thomas c.1791–1867, Flore, ag. labourer · Hannah 1798–1835, Flore · <span class="mm">m. 1817, Flore</span></span></div>
+                    <ul>
+                      <li><div class="anc solo"><span class="a">John Bazeley</span></div></li>
+                      <li><div class="anc"><span class="a">William Rogers</span><span class="eq">&amp;</span><span class="s">Rachel Newitt</span><span class="m2">Rachel c.1775–1848 · <span class="mm">m. 16 Oct 1797, Long Buckby</span></span></div></li>
+                    </ul>
+                  </li>
+                  <li>
+                    <div class="anc"><span class="a">Richard Old</span><span class="eq">&amp;</span><span class="s">Sarah Allen</span><span class="m2">Richard 1789, Wootton – 1854, ag. labourer · Sarah 1791, Harlestone – 1861, Flore · <span class="mm">m. 1810, Flore</span> (the name is also written “Auld”)</span></div>
+                    <ul>
+                      <li><div class="anc"><span class="a">James Old</span><span class="eq">&amp;</span><span class="s">Ann Kent</span><span class="m2">James 1767–1831 · Ann 1764–1838 · <span class="mm">m. 1788, Wootton</span></span></div></li>
+                      <li><div class="anc solo"><span class="a">Roger Allen</span></div></li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ul>
+
+    <!-- Crewkerne deep block -->
+    <div class="crewk">
+      <div class="linehead" style="margin-top:0">The Crewkerne ancestry · Holman, Cottle, Homan &amp; Mumford</div>
+      <p class="linesub">Behind <b>Samuel Holman &amp; Sarah Cottel</b> — all baptised, married and buried at Crewkerne, Somerset, back to the early 1700s. The Homan and Mumford families intermarried twice, so a few names recur. Spellings drift across the records: Holman/Homan, Cottle/Cottel, Old/Auld.</p>
+      <ul class="ped">
+        <li class="direct">
+          <div class="anc"><span class="a">Samuel Holman</span><span class="eq">&amp;</span><span class="s">Sarah Cottel</span><span class="m2">Samuel bpt 1789 – bur 1860 · Sarah bpt 1791 – bur 1870 · <span class="mm">m. 11 Aug 1814, Crewkerne</span></span></div>
+          <ul>
+            <li class="direct">
+              <div class="anc"><span class="a">George Homan</span><span class="eq">&amp;</span><span class="s">Ann Astin</span><span class="m2">George 1748–1811 · Ann d. 1835/6 · <span class="mm">m. 29 Nov 1773</span></span></div>
+              <ul>
+                <li>
+                  <div class="anc"><span class="a">Joseph Homan</span><span class="eq">&amp;</span><span class="s">Honor Bargery</span><span class="m2">Honor b. 1719 · <span class="mm">m. 25 Feb 1744</span></span></div>
+                  <ul>
+                    <li>
+                      <div class="anc"><span class="a">Peter Homan</span><span class="eq">&amp;</span><span class="s">Elizabeth Mantell</span><span class="m2">Elizabeth b. 1680 · <span class="mm">m. 13 May 1703</span></span></div>
+                      <ul><li><div class="anc solo"><span class="a">John Mantell</span></div></li></ul>
+                    </li>
+                    <li>
+                      <div class="anc"><span class="a">Solomon Bargery</span><span class="eq">&amp;</span><span class="s">Elizabeth Palmer</span><span class="m2">Solomon 1696–1780 · <span class="mm">m. 26 Dec 1716</span></span></div>
+                      <ul><li><div class="anc solo"><span class="a">John Bargery</span></div></li></ul>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <div class="anc"><span class="a">William Cottle</span><span class="eq">&amp;</span><span class="s">Sarah Mumford</span><span class="m2">William 1762–1848 · Sarah 1769–1827 · <span class="mm">m. 14 May 1788</span></span></div>
+              <ul>
+                <li><div class="anc solo"><span class="a">John Jr Cottle</span><span class="m2">wife not recorded</span></div></li>
+                <li>
+                  <div class="anc"><span class="a">Joseph Mumford</span><span class="eq">&amp;</span><span class="s">Susannah Browse</span><span class="m2">both b. 1737 · Joseph d. 1824 · Susannah d. 1805 · <span class="mm">m. 27 Feb 1759</span></span></div>
+                  <ul>
+                    <li>
+                      <div class="anc"><span class="a">Thomas Mumford</span><span class="eq">&amp;</span><span class="s">Elizabeth Homan</span><span class="m2">Thomas 1704–1783 · Elizabeth 1705–1766 · <span class="mm">m. 27 Dec 1726</span> — Elizabeth was a daughter of Peter Homan &amp; Elizabeth Mantell above, so the families married twice</span></div>
+                      <ul>
+                        <li>
+                          <div class="anc"><span class="a">Richard Mumford</span><span class="eq">&amp;</span><span class="s">Sarah South</span><span class="m2">Richard 1676–1752 · Sarah d. 1766 · <span class="mm">m. 6 May 1703</span></span></div>
+                          <ul><li><div class="anc solo"><span class="a">Edward Mumford</span></div></li></ul>
+                        </li>
+                      </ul>
+                    </li>
+                    <li>
+                      <div class="anc"><span class="a">Oliver Browe</span><span class="eq">&amp;</span><span class="s">Sarah Palmer</span><span class="m2">Oliver b. 1712 · <span class="mm">m. 7 Feb 1736</span></span></div>
+                      <ul><li><div class="anc solo"><span class="a">Joseph Browse</span></div></li></ul>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================= SECTION 5 — GAPS ================= -->
+  <section class="sec reveal">
+    <div class="sec-head">
+      <span class="sec-num">05</span>
+      <h2 style="color:var(--oxblood)">Gaps &amp; open questions</h2>
+    </div>
+    <div class="gaps">
+      <ul class="gaplist">
+        <li><span class="side">Maternal · the Holts</span><b>Tony Holt's whole line</b> — his birth/death dates, and his parents (the last great-grandparent gap). Now the main frontier.</li>
+        <li><span class="side">Maternal · grandparents</span><b>Betty &amp; Tony</b> — Betty's death date, and when &amp; where she and Tony married.</li>
+        <li><span class="side">Maternal · first marriage</span><b>Frederick Day's daughter “Mary”</b> — did Fred &amp; Annie Smith have a child who died with Annie in 1930?</li>
+        <li><span class="side">Paternal · the puzzle</span><b>Audrey's father (a Valente)</b> — name, and why the “widowed 1926” date clashes with her 1932 birth.</li>
+        <li><span class="side">Paternal · deep line</span><b>Stanley Renton's mother</b> (Walter Winstanley Renton's wife) — recorded only as “unknown.”</li>
+        <li><span class="side">Day line · to verify</span><b>The Lloyd dates</b> — John Lloyd's 1797 marriage sits before his 1791 birth; and confirm Eliza Mary Ann Day's Jersey birth.</li>
+        <li><span class="side">Italian line</span><b>Maria Vincensa Annonio's mother</b>, and confirm Dominica Quaglia's surname.</li>
+        <li><span class="side">Your generation</span><b>Cousins' dates</b> — Jake &amp; Joseph Holt; Nathan Mellor, Toni &amp; Joshua Holt; and the Renton cousins.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ================= SECTION 6 — SOURCES ================= -->
+  <section class="sec reveal">
+    <div class="sec-head">
+      <span class="sec-num">06</span>
+      <h2>Where this comes from</h2>
+    </div>
+    <ul class="sources">
+      <li><b>Geoffrey Day's family charts</b> — from Geoff, your grandma Betty's brother: the ancestry of Frederick Day (Leeds &amp; West Riding), of Doris Catherine Day (Crewkerne, Isle of Wight &amp; Northamptonshire), the Holman &amp; Cottle Crewkerne chart, and the <em>Frederick &amp; Doris</em> record with its census and registration detail.</li>
+      <li><b>Valenté Family Tree</b> (research dossier, ~75 pp.) — the deep Renton pedigree, the Italian Martino/Annonio/Carconi line, census extracts and the 1949 Carcone–Valentine marriage certificate.</li>
+      <li><b>Ronnie &amp; Audrey Renton memorial cards</b> — Audrey (Nabwood Crematorium, 30 Apr 2013) and Ronnie (Nabwood Crematorium, 6 Sep 2016).</li>
+      <li><b>Kevin Holt — order of service</b>, Kingsdown Crematorium, 28 May 2026 (b. 14 May 1960 – d. 5 May 2026).</li>
+      <li><b>Yorkshire Evening Post</b>, 18 May 2012 — “I still do, 60 years on,” on Ronnie &amp; Audrey's vow renewal.</li>
+      <li><b>Your own notes</b> — the Holt / Day family and your immediate family.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>The Renton–Holt Family Record</span>
+    <span>Compiled 14 June 2026 · maternal Day lines added 17 June · a living document — keep adding</span>
+  </footer>
+
+</div>
+</body>
+</html>
