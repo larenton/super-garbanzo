@@ -52,6 +52,7 @@ const TO_HK: Record<ActivityType, WorkoutActivityType> = {
   row: WorkoutActivityType.rowing,
   yoga: WorkoutActivityType.yoga,
   hiit: WorkoutActivityType.highIntensityIntervalTraining,
+  mixed: WorkoutActivityType.mixedCardio,
   sport: WorkoutActivityType.mixedCardio,
   strength: WorkoutActivityType.traditionalStrengthTraining,
 };
@@ -75,6 +76,9 @@ function fromHK(t: WorkoutActivityType): ActivityType {
       return 'yoga';
     case WorkoutActivityType.highIntensityIntervalTraining:
       return 'hiit';
+    case WorkoutActivityType.mixedCardio:
+    case WorkoutActivityType.stairClimbing:
+      return 'mixed';
     case WorkoutActivityType.traditionalStrengthTraining:
     case WorkoutActivityType.functionalStrengthTraining:
     case WorkoutActivityType.coreTraining:

@@ -98,7 +98,7 @@ export default function Onboarding() {
             }}
           />
           <Text style={[type.caption, { color: t.text3, textAlign: 'center' }]}>
-            Starts you on a 12-week strength + running plan you can edit any time.
+            Loads your Week 1 plan: Push / Pull / Legs with rowing between, plus your macro targets. You can edit it any time.
           </Text>
         </View>
       </ScrollView>

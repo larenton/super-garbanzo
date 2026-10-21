@@ -4,16 +4,37 @@ import Svg, { G, Line, Rect, Text as SvgText } from 'react-native-svg';
 
 import { getExercise } from '@/data/exercises';
 import { formatWeight } from '@/lib/units';
-import type { CardioSegment, ExerciseLog, Units, WorkoutTemplate } from '@/lib/types';
+import type { CardioSegment, ExerciseLog, PlannedExercise, Units, WorkoutTemplate } from '@/lib/types';
 import { kindColor, radius, space, type, useTheme, svgFont } from '@/lib/theme';
+import { getMedia } from '@/data/exerciseMedia';
 import { MuscleThumb } from './BodyMap';
+import { ExerciseVisual, VideoButton } from './PlanVisuals';
 import { Icon } from './ui';
 
 function fmtRest(sec: number) {
-  return sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} rest` : `${sec}s rest`;
+  if (sec === 0) return 'straight into the next';
+  return sec >= 60 ? `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} rest` : `${sec} s rest`;
 }
 
-/** Vertical timeline of a strength session: warm-up → exercises → cool-down. */
+/** Splits a plan's exercises into superset blocks by letter: A1 + A2 → block A. */
+export function supersetBlocks(exercises: PlannedExercise[]) {
+  const blocks: { letter: string; items: { pe: PlannedExercise; index: number }[] }[] = [];
+  exercises.forEach((pe, index) => {
+    const letter = pe.group?.charAt(0) ?? String(index + 1);
+    const last = blocks[blocks.length - 1];
+    if (pe.group && last && last.letter === letter) last.items.push({ pe, index });
+    else blocks.push({ letter, items: [{ pe, index }] });
+  });
+  return blocks;
+}
+
+export function blockTitle(count: number, letter: string) {
+  if (count >= 3) return `Giant set ${letter}`;
+  if (count === 2) return `Superset ${letter}`;
+  return `Block ${letter}`;
+}
+
+/** Vertical timeline of a strength session: warm-up → superset blocks → cool-down. */
 export function SessionFlow({
   template,
   onPressExercise,
@@ -33,7 +54,7 @@ export function SessionFlow({
         {marker}
         {!isLast ? <View style={{ flex: 1, width: 2, backgroundColor: t.separator, marginVertical: 2 }} /> : null}
       </View>
-      <View style={{ flex: 1, paddingBottom: isLast ? 0 : space.md }}>{content}</View>
+      <View style={{ flex: 1, paddingBottom: isLast ? 0 : space.lg }}>{content}</View>
     </View>
   );
   const dot = (icon: string) => (
@@ -42,54 +63,87 @@ export function SessionFlow({
     </View>
   );
 
+  const card = (pe: PlannedExercise, index: number) => {
+    const ex = getExercise(pe.exerciseId);
+    const prev = last?.(pe.exerciseId);
+    const prevTop = prev?.sets.reduce((a, s) => (s.weight > a.weight ? s : a), prev.sets[0]);
+    return (
+      <View
+        key={`${pe.exerciseId}-${index}`}
+        style={{ backgroundColor: t.cardAlt, borderRadius: radius.md, padding: space.md, gap: space.sm }}
+      >
+        <Pressable
+          onPress={() => onPressExercise?.(pe.exerciseId)}
+          accessibilityRole="button"
+          accessibilityLabel={`${pe.group ?? ''} ${ex.name}, ${pe.sets} sets of ${pe.reps}`}
+          style={({ pressed }) => ({ flexDirection: 'row', gap: space.sm, alignItems: 'flex-start', opacity: pressed ? 0.7 : 1 })}
+        >
+          {pe.group ? (
+            <View style={{ backgroundColor: color, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginTop: 2 }}>
+              <Text style={[type.caption, { color: '#fff', fontWeight: '700' }]}>{pe.group}</Text>
+            </View>
+          ) : null}
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text style={[type.headline, { color: t.text }]}>{ex.name}</Text>
+            <Text style={[type.footnote, { color: t.text2 }]}>
+              <Text style={{ fontWeight: '700', color: t.text }}>
+                {pe.sets} × {pe.reps}
+              </Text>
+              {'  ·  '}
+              {fmtRest(pe.restSec)}
+            </Text>
+            {pe.note ? <Text style={[type.caption, { color: t.text3 }]}>{pe.note}</Text> : null}
+            {prevTop && prevTop.weight > 0 ? (
+              <Text style={[type.caption, { color: t.text3 }]}>
+                Last: {formatWeight(prevTop.weight, units)} × {prevTop.reps}
+                {ex.timed ? ' s' : ''}
+              </Text>
+            ) : null}
+          </View>
+          <Icon name="chevron-forward" size={16} color={t.text3} />
+        </Pressable>
+        {getMedia(pe.exerciseId) ? (
+          <>
+            <ExerciseVisual exerciseId={pe.exerciseId} maxHeight={120} />
+            <VideoButton exerciseId={pe.exerciseId} compact />
+          </>
+        ) : (
+          <View style={{ alignItems: 'flex-start' }}>
+            <MuscleThumb primary={ex.primary} secondary={ex.secondary} size={64} />
+          </View>
+        )}
+      </View>
+    );
+  };
+
   return (
     <View>
       {node(
         <View style={{ paddingTop: 4 }}>
-          <Text style={[type.subhead, { color: t.text }]}>Warm-up · 8 min</Text>
-          <Text style={[type.footnote, { color: t.text3 }]}>Easy cardio, then 2 ramp-up sets of the first lift</Text>
+          <Text style={[type.subhead, { color: t.text }]}>Warm-up · 5 min</Text>
+          <Text style={[type.footnote, { color: t.text3 }]}>{template.warmup ?? 'Easy cardio, then 2 ramp-up sets of the first lift'}</Text>
         </View>,
         dot('flame-outline'),
       )}
-      {template.exercises.map((pe, i) => {
-        const ex = getExercise(pe.exerciseId);
-        const prev = last?.(pe.exerciseId);
-        const prevTop = prev?.sets.reduce((a, s) => (s.weight > a.weight ? s : a), prev.sets[0]);
+      {supersetBlocks(template.exercises).map((b) => {
+        const grouped = b.items.length > 1;
+        const restAfter = b.items[b.items.length - 1].pe.restSec;
+        const restBetween = b.items[0].pe.restSec;
         return node(
-          <Pressable
-            onPress={() => onPressExercise?.(pe.exerciseId)}
-            accessibilityRole="button"
-            accessibilityLabel={`${ex.name}, ${pe.sets} sets of ${pe.reps}`}
-            style={({ pressed }) => ({
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: space.md,
-              backgroundColor: t.cardAlt,
-              borderRadius: radius.md,
-              padding: space.md,
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <View style={{ flex: 1, gap: 3 }}>
-              <Text style={[type.headline, { color: t.text }]} numberOfLines={1}>
-                {ex.name}
-              </Text>
-              <Text style={[type.footnote, { color: t.text2 }]}>
-                <Text style={{ fontWeight: '700', color: t.text }}>
-                  {pe.sets} × {pe.reps}
+          <View style={{ gap: space.sm }}>
+            {grouped ? (
+              <View style={{ paddingTop: 4 }}>
+                <Text style={[type.subhead, { color: t.text }]}>{blockTitle(b.items.length, b.letter)}</Text>
+                <Text style={[type.footnote, { color: t.text3 }]}>
+                  {b.items.map((x) => x.pe.group).join(' → ')}, {restBetween ? `${restBetween} s between` : 'back to back'}, {restAfter} s
+                  after. Repeat for all sets.
                 </Text>
-                {'  ·  '}
-                {fmtRest(pe.restSec)}
-              </Text>
-              {prevTop && prevTop.weight > 0 ? (
-                <Text style={[type.caption, { color: t.text3 }]}>
-                  Last: {formatWeight(prevTop.weight, units)} × {prevTop.reps}
-                </Text>
-              ) : null}
-              {pe.note ? <Text style={[type.caption, { color: t.text3 }]}>{pe.note}</Text> : null}
+              </View>
+            ) : null}
+            <View style={{ gap: space.sm, borderLeftWidth: grouped ? 3 : 0, borderLeftColor: color, paddingLeft: grouped ? space.sm : 0 }}>
+              {b.items.map((x) => card(x.pe, x.index))}
             </View>
-            <MuscleThumb primary={ex.primary} secondary={ex.secondary} size={64} />
-          </Pressable>,
+          </View>,
           <View
             style={{
               width: 28,
@@ -98,13 +152,13 @@ export function SessionFlow({
               backgroundColor: color,
               alignItems: 'center',
               justifyContent: 'center',
-              marginTop: space.md,
+              marginTop: 2,
             }}
           >
-            <Text style={[type.caption, { color: '#fff', fontWeight: '700' }]}>{i + 1}</Text>
+            <Text style={[type.caption, { color: '#fff', fontWeight: '700' }]}>{b.letter}</Text>
           </View>,
           false,
-          `${pe.exerciseId}-${i}`,
+          `block-${b.letter}-${b.items[0].index}`,
         );
       })}
       {node(

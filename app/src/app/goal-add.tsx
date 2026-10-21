@@ -24,7 +24,7 @@ export default function GoalAdd() {
   const s = useStore();
   const units = s.settings.units;
   const [kind, setKind] = useState<GoalType>('strength');
-  const [exerciseId, setExerciseId] = useState('bench-press');
+  const [exerciseId, setExerciseId] = useState('seated-db-shoulder-press');
   const [target, setTarget] = useState('');
   const [weeks, setWeeks] = useState(12);
 

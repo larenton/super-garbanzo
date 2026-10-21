@@ -2,8 +2,9 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
+import { RpeScale, RulesList, TempoBar } from '@/components/PlanVisuals';
 import { SessionRow, statusMeta } from '@/components/SessionCard';
-import { Button, Card, Divider, Icon, IconButton, LargeHeader, ProgressBar, Screen, Segmented, tap } from '@/components/ui';
+import { Button, Card, Divider, Icon, IconButton, LargeHeader, ProgressBar, Screen, SectionTitle, Segmented, tap } from '@/components/ui';
 import { dayStatus, logsOn, plannedTemplate } from '@/lib/analytics';
 import { calendarSupported } from '@/lib/calendar';
 import {
@@ -88,6 +89,10 @@ export default function PlanScreen() {
           </Text>
         </View>
         <ProgressBar value={Math.max(0, programWeek - 1) / s.program.weeks} color={t.accent} height={6} />
+        {s.program.summary ? <Text style={[type.footnote, { color: t.text2 }]}>{s.program.summary}</Text> : null}
+        <Text style={[type.caption, { color: t.text3 }]}>
+          Pattern: lift, cardio, lift, cardio, lift, cardio, rest. You never train the same system two days running.
+        </Text>
       </Card>
 
       <Segmented
@@ -161,6 +166,27 @@ export default function PlanScreen() {
           <Legend />
         </>
       )}
+
+      {s.program.rules?.length ? (
+        <>
+          <SectionTitle title="The rules this week" />
+          <Card>
+            <RulesList rules={s.program.rules} />
+          </Card>
+        </>
+      ) : null}
+
+      {s.program.tempo ? (
+        <Card style={{ gap: space.md }}>
+          <Text style={[type.headline, { color: t.text }]}>Tempo {s.program.tempo}</Text>
+          <TempoBar tempo={s.program.tempo} />
+        </Card>
+      ) : null}
+
+      <Card style={{ gap: space.md }}>
+        <Text style={[type.headline, { color: t.text }]}>Cardio effort</Text>
+        <RpeScale />
+      </Card>
 
       <Card style={{ gap: space.md }}>
         <View style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>

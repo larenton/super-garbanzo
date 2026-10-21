@@ -20,7 +20,8 @@ import {
 } from '@/components/ui';
 import { WeekStrip } from '@/components/WeekStrip';
 import { getExercise } from '@/data/exercises';
-import { goalProgress, logsOn, macroTotals, nextSessions, plannedTemplate, weeklyBuckets } from '@/lib/analytics';
+import { goalProgress, logsOn, macroTotals, nextSessions, plannedTemplate, targetsFor, weeklyBuckets } from '@/lib/analytics';
+import { CheckInCard } from '@/components/CheckIn';
 import { formatLong, greeting, startOfWeek, today } from '@/lib/dates';
 import * as Health from '@/lib/health';
 import { useStore } from '@/lib/store';
@@ -126,9 +127,14 @@ export default function TodayScreen() {
         </View>
       </Card>
 
+      <SectionTitle title="Daily check-in" action="Week report" onAction={() => router.push('/report')} />
+      <Card>
+        <CheckInCard date={date} />
+      </Card>
+
       <SectionTitle title="Macros" action="Log food" onAction={() => router.push({ pathname: '/food-add', params: { date } })} />
       <Card onPress={() => router.navigate('/nutrition')} accessibilityLabel="Open macros">
-        <MacroSummary totals={totals} targets={s.targets} compact />
+        <MacroSummary totals={totals} targets={targetsFor(s, date)} compact />
       </Card>
 
       <SectionTitle title="Activity" />

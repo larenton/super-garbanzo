@@ -4,11 +4,12 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { BodyMap } from '@/components/BodyMap';
 import { SessionRow, statusMeta, templateIcon } from '@/components/SessionCard';
-import { Button, Card, Chip, Divider, Icon, IconBadge, Screen, SectionTitle, Stat } from '@/components/ui';
+import { CoachNote, RpeScale, TempoBar } from '@/components/PlanVisuals';
+import { Button, Card, Chip, confirmAction, Divider, Icon, IconBadge, Screen, SectionTitle, Stat } from '@/components/ui';
 import { EffortProfile, SessionFlow } from '@/components/WorkoutDiagram';
 import { getExercise } from '@/data/exercises';
 import { dayStatus, lastPerformance, logsOn, muscleLoad, plannedTemplate, progressionHint } from '@/lib/analytics';
-import { formatDuration, formatLong, relativeDay, today } from '@/lib/dates';
+import { addDays, formatDuration, formatLong, relativeDay, today } from '@/lib/dates';
 import { useStore } from '@/lib/store';
 import { resyncCalendarIfEnabled } from '@/lib/sync';
 import { KIND_LABELS, kindColor, space, type, useTheme } from '@/lib/theme';
@@ -40,6 +41,24 @@ export default function SessionScreen() {
     setChanging(false);
     resyncCalendarIfEnabled().catch(() => {});
   };
+
+  // Plan rule 3: "Feeling flat? Swap it" — steady cardio today, this lift tomorrow.
+  const swapTarget = s.templates.find((x) => x.id === 'steady-row') ?? s.templates.find((x) => x.kind === 'cardio');
+  const canSwap = tpl?.kind === 'strength' && logs.length === 0 && date >= today() && swapTarget;
+  const swap = () => {
+    if (!tpl || !swapTarget) return;
+    confirmAction(
+      'Feeling flat? Swap it',
+      `${swapTarget.name} today, and ${tpl.name} moves to ${relativeDay(addDays(date, 1)).toLowerCase()}.`,
+      'Swap',
+      () => {
+        s.setOverride(date, swapTarget.id);
+        s.setOverride(addDays(date, 1), tpl.id);
+        resyncCalendarIfEnabled().catch(() => {});
+      },
+    );
+  };
+  const intensityLabel = tpl?.intensity?.split(' ·')[0];
 
   const hints = tpl?.exercises
     .map((pe) => ({ id: pe.exerciseId, hint: progressionHint(s.logs, pe.exerciseId, pe.reps, increment(s.settings.units)) }))
@@ -114,6 +133,29 @@ export default function SessionScreen() {
           />
         ) : null}
 
+        {canSwap ? (
+          <Button title="Feeling flat? Swap for steady cardio" icon="swap-horizontal" variant="secondary" size="md" onPress={swap} />
+        ) : null}
+
+        {tpl?.intensity ? (
+          <Card style={{ gap: space.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+              <Icon name="pulse" size={18} color={kindColor(t, tpl.kind)} />
+              <Text style={[type.headline, { color: t.text }]}>{tpl.intensity}</Text>
+            </View>
+            <RpeScale highlight={intensityLabel === 'Hard efforts' || intensityLabel === 'Max effort' ? 'Hard' : intensityLabel} />
+          </Card>
+        ) : null}
+
+        {tpl?.why ? <CoachNote title="Why this session" body={tpl.why} /> : null}
+
+        {tpl?.kind === 'strength' && s.program.tempo ? (
+          <Card style={{ gap: space.md }}>
+            <Text style={[type.headline, { color: t.text }]}>Tempo {s.program.tempo} on every lift</Text>
+            <TempoBar tempo={s.program.tempo} />
+          </Card>
+        ) : null}
+
         {tpl && tpl.exercises.length > 0 ? (
           <>
             <SectionTitle title="Muscles worked" />
@@ -158,6 +200,14 @@ export default function SessionScreen() {
               />
             </Card>
           </>
+        ) : null}
+
+        {tpl?.note ? (
+          <CoachNote
+            title={tpl.note.includes(':') ? tpl.note.split(':')[0] : 'Coach note'}
+            body={tpl.note.includes(':') ? tpl.note.slice(tpl.note.indexOf(':') + 1).trim() : tpl.note}
+            icon={tpl.note.startsWith('Benchmark') ? 'stopwatch-outline' : 'trending-up'}
+          />
         ) : null}
 
         <SectionTitle

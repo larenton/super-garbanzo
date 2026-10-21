@@ -8,14 +8,13 @@ import * as Health from '@/lib/health';
 import { initialData, useStore } from '@/lib/store';
 import { resyncCalendarIfEnabled, syncFromHealth } from '@/lib/sync';
 import { space, type, useTheme } from '@/lib/theme';
-import type { Units } from '@/lib/types';
+import type { MacroTargets, Units } from '@/lib/types';
 import { kcalFromMacros } from '@/lib/units';
 
 export default function SettingsScreen() {
   const t = useTheme();
   const s = useStore();
   const [busy, setBusy] = useState<string | null>(null);
-  const macroKcal = kcalFromMacros(s.targets.protein, s.targets.carbs, s.targets.fat);
 
   const toggleHealth = async (on: boolean) => {
     if (!on) return s.updateSettings({ healthEnabled: false });
@@ -67,53 +66,9 @@ export default function SettingsScreen() {
         </View>
       </Card>
 
-      <SectionTitle title="Daily macro targets" />
-      <Card style={{ gap: space.md }}>
-        <TargetRow
-          label="Calories"
-          unit="kcal"
-          value={s.targets.kcal}
-          step={50}
-          onChange={(kcal) => s.setTargets({ ...s.targets, kcal })}
-        />
-        <Divider />
-        <TargetRow
-          label="Protein"
-          unit="g"
-          color={t.protein}
-          value={s.targets.protein}
-          step={5}
-          onChange={(protein) => s.setTargets({ ...s.targets, protein })}
-        />
-        <TargetRow
-          label="Carbs"
-          unit="g"
-          color={t.carbs}
-          value={s.targets.carbs}
-          step={5}
-          onChange={(carbs) => s.setTargets({ ...s.targets, carbs })}
-        />
-        <TargetRow
-          label="Fat"
-          unit="g"
-          color={t.fat}
-          value={s.targets.fat}
-          step={5}
-          onChange={(fat) => s.setTargets({ ...s.targets, fat })}
-        />
-        <Text style={[type.footnote, { color: Math.abs(macroKcal - s.targets.kcal) > 100 ? t.warn : t.text3 }]}>
-          Your macros add up to {macroKcal} kcal.
-          {Math.abs(macroKcal - s.targets.kcal) > 100 ? ' That differs from your calorie target.' : ''}
-        </Text>
-        {Math.abs(macroKcal - s.targets.kcal) > 100 ? (
-          <Button
-            title={`Set calories to ${macroKcal}`}
-            size="sm"
-            variant="secondary"
-            onPress={() => s.setTargets({ ...s.targets, kcal: macroKcal })}
-          />
-        ) : null}
-      </Card>
+      <SectionTitle title="Macro targets" />
+      <TargetsCard title="Lift days (Mon / Wed / Fri)" targets={s.targets} onChange={s.setTargets} />
+      <TargetsCard title="Cardio & rest days" targets={s.restTargets} onChange={s.setRestTargets} />
 
       <SectionTitle title="Connections" />
       <Card style={{ gap: space.md }}>
@@ -169,6 +124,26 @@ export default function SettingsScreen() {
             if (on && !(await requestCalendarAccess())) return;
             s.updateSettings({ showCalendarEvents: on });
           }}
+        />
+      </Card>
+
+      <SectionTitle title="Training plan" />
+      <Card style={{ gap: space.md }}>
+        <Text style={[type.footnote, { color: t.text3 }]}>
+          {s.program.name}, starting {s.program.startDate}. Reloading puts back the Week 1 sessions, schedule and macro targets from your
+          plan. Your logged history stays.
+        </Text>
+        <Button
+          title="Reload Week 1 plan"
+          icon="refresh"
+          variant="secondary"
+          size="md"
+          onPress={() =>
+            confirmAction('Reload Week 1 plan?', 'Any edits to your workouts and schedule will be replaced.', 'Reload', () => {
+              s.loadPlan();
+              resyncCalendarIfEnabled().catch(() => {});
+            })
+          }
         />
       </Card>
 
@@ -269,5 +244,46 @@ function ToggleRow({
       </View>
       <Switch value={value} onValueChange={onChange} disabled={disabled} trackColor={{ true: t.good }} accessibilityLabel={title} />
     </View>
+  );
+}
+
+function TargetsCard({ title, targets, onChange }: { title: string; targets: MacroTargets; onChange: (t: MacroTargets) => void }) {
+  const t = useTheme();
+  const macroKcal = kcalFromMacros(targets.protein, targets.carbs, targets.fat);
+  const off = Math.abs(macroKcal - targets.kcal) > 100;
+  return (
+    <Card style={{ gap: space.md }}>
+      <Text style={[type.headline, { color: t.text }]}>{title}</Text>
+      <TargetRow label="Calories" unit="kcal" value={targets.kcal} step={50} onChange={(kcal) => onChange({ ...targets, kcal })} />
+      <Divider />
+      <TargetRow
+        label="Protein"
+        unit="g"
+        color={t.protein}
+        value={targets.protein}
+        step={5}
+        onChange={(protein) => onChange({ ...targets, protein })}
+      />
+      <TargetRow
+        label="Carbs"
+        unit="g"
+        color={t.carbs}
+        value={targets.carbs}
+        step={5}
+        onChange={(carbs) => onChange({ ...targets, carbs })}
+      />
+      <TargetRow label="Fat" unit="g" color={t.fat} value={targets.fat} step={5} onChange={(fat) => onChange({ ...targets, fat })} />
+      <Text style={[type.footnote, { color: off ? t.warn : t.text3 }]}>
+        These macros add up to {macroKcal} kcal.{off ? ' That differs from the calorie target.' : ''}
+      </Text>
+      {off ? (
+        <Button
+          title={`Set calories to ${macroKcal}`}
+          size="sm"
+          variant="secondary"
+          onPress={() => onChange({ ...targets, kcal: macroKcal })}
+        />
+      ) : null}
+    </Card>
   );
 }

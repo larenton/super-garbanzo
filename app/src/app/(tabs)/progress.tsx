@@ -10,6 +10,7 @@ import {
   Chip,
   Divider,
   EmptyState,
+  Icon,
   IconButton,
   LargeHeader,
   ProgressBar,
@@ -74,7 +75,7 @@ function Trends() {
     const count = new Map<string, number>();
     s.logs.forEach((l) => l.exercises.forEach((e) => count.set(e.exerciseId, (count.get(e.exerciseId) ?? 0) + 1)));
     return [...count.entries()]
-      .filter(([id]) => !getExercise(id).bodyweight)
+      .filter(([id]) => !getExercise(id).bodyweight && !getExercise(id).timed)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
       .map(([id]) => id);
@@ -104,8 +105,59 @@ function Trends() {
   }, [liveSteps, stepDays]);
   const steps = liveSteps ? healthSteps : s.settings.demo ? demoSteps(stepDays) : [];
 
+  const b = s.baseline;
+  const latest = s.weights[s.weights.length - 1];
+
   return (
     <>
+      <Card onPress={() => router.push('/report')} accessibilityLabel="Open week report">
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+          <Icon name="document-text-outline" size={22} color={t.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={[type.headline, { color: t.text }]}>Week report for Claude</Text>
+            <Text style={[type.footnote, { color: t.text3 }]}>Weight, waist, row splits, top lifts and how you felt, ready to paste.</Text>
+          </View>
+          <Icon name="chevron-forward" size={16} color={t.text3} />
+        </View>
+      </Card>
+
+      {b ? (
+        <Card style={{ gap: space.md }}>
+          <CardHead title="Starting point" sub={`From your plan · ${formatDayMonth(b.date)}`} />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: space.md }}>
+            <View style={{ width: '50%' }}>
+              <Stat label="Weight" value={formatWeight(b.weightKg, units, false)} unit={units} />
+              {latest && latest.date > b.date ? (
+                <Text style={[type.caption, { color: t.text3 }]}>
+                  Now {formatWeight(latest.kg, units)} ({latest.kg - b.weightKg >= 0 ? '+' : '−'}
+                  {Math.abs(latest.kg - b.weightKg).toFixed(1)})
+                </Text>
+              ) : (
+                <Text style={[type.caption, { color: t.text3 }]}>Smart scale, latest</Text>
+              )}
+            </View>
+            {b.leanMassKg ? (
+              <View style={{ width: '50%' }}>
+                <Stat label="Lean mass" value={formatWeight(b.leanMassKg, units, false)} unit={units} color={t.mobility} />
+                <Text style={[type.caption, { color: t.text3 }]}>Scale estimate, trending up</Text>
+              </View>
+            ) : null}
+            {b.bodyFatScale ? (
+              <View style={{ width: '50%' }}>
+                <Stat label="Body fat (scale)" value={String(b.bodyFatScale)} unit="%" color={t.cardio} />
+                <Text style={[type.caption, { color: t.text3 }]}>Trend only, likely reads low</Text>
+              </View>
+            ) : null}
+            {b.bodyFatDexa ? (
+              <View style={{ width: '50%' }}>
+                <Stat label="Body fat (DEXA)" value={String(b.bodyFatDexa)} unit="%" color={t.strength} />
+                <Text style={[type.caption, { color: t.text3 }]}>Feb 2024, the accurate reference</Text>
+              </View>
+            ) : null}
+          </View>
+        </Card>
+      ) : null}
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }}>
         {([28, 84, 182, 365] as Range[]).map((r) => (
           <Chip
@@ -225,7 +277,11 @@ function Trends() {
       <Card style={{ gap: space.md }}>
         <CardHead title="Nutrition" sub={`Average over logged days (${avg.days})`} />
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Stat label="Calories" value={formatNumber(avg.kcal)} unit={`/ ${formatNumber(s.targets.kcal)}`} />
+          <Stat
+            label="Calories"
+            value={formatNumber(avg.kcal)}
+            unit={`/ ${formatNumber(s.restTargets.kcal)}-${formatNumber(s.targets.kcal)}`}
+          />
           <Stat label="Protein" value={String(Math.round(avg.protein))} unit={`/ ${s.targets.protein}g`} color={t.protein} />
           <Stat label="Carbs" value={String(Math.round(avg.carbs))} unit="g" color={t.carbs} />
           <Stat label="Fat" value={String(Math.round(avg.fat))} unit="g" color={t.fat} />

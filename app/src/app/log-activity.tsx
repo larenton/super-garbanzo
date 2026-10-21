@@ -11,7 +11,13 @@ import { kindForActivity } from '@/lib/sync';
 import { kindColor, space, type, useTheme } from '@/lib/theme';
 import type { ActivityType } from '@/lib/types';
 
-const ACTIVITIES: ActivityType[] = ['run', 'walk', 'cycle', 'hike', 'swim', 'row', 'hiit', 'yoga', 'sport', 'strength'];
+const ACTIVITIES: ActivityType[] = ['row', 'run', 'walk', 'cycle', 'hike', 'swim', 'mixed', 'hiit', 'yoga', 'sport', 'strength'];
+
+/** Accepts "1:52", "1:52.4" or "152" and returns a tidy "m:ss.s" split, or undefined. */
+function cleanSplit(v: string): string | undefined {
+  const m = v.trim().match(/^(\d{1,2})[:.](\d{2}(?:\.\d)?)$/) ?? v.trim().match(/^(\d)(\d{2})$/);
+  return m ? `${m[1]}:${m[2]}` : undefined;
+}
 const EFFORT = ['Easy', 'Moderate', 'Hard', 'Very hard', 'All out'];
 
 export default function LogActivity() {
@@ -24,8 +30,13 @@ export default function LogActivity() {
   const [activity, setActivity] = useState<ActivityType>(tpl?.activity ?? 'run');
   const [duration, setDuration] = useState(tpl?.durationMin ?? 30);
   const [distance, setDistance] = useState(tpl?.targetDistanceKm ? String(tpl.targetDistanceKm) : '');
-  const [effort, setEffort] = useState(2);
+  const plannedEffort = tpl?.intensity?.split(' ')[0];
+  const [effort, setEffort] = useState(
+    plannedEffort === 'Hard' || plannedEffort === 'Max' ? 3 : plannedEffort === 'Steady' ? 1 : plannedEffort === 'Easy' ? 0 : 2,
+  );
   const [notes, setNotes] = useState('');
+  const [avgSplit, setAvgSplit] = useState('');
+  const [splits, setSplits] = useState<string[]>(tpl?.splits?.kind === 'intervals' ? Array(tpl.splits.count).fill('') : []);
   const [healthWorkouts, setHealthWorkouts] = useState<Health.HealthWorkout[]>([]);
 
   useEffect(() => {
@@ -55,6 +66,8 @@ export default function LogActivity() {
       endedAt: end.toISOString(),
       durationMin: duration,
       distanceKm,
+      avgSplit: cleanSplit(avgSplit),
+      splits: splits.some((x) => cleanSplit(x)) ? splits.map((x) => cleanSplit(x) ?? '') : undefined,
       effort: effort + 1,
       notes: notes.trim() || undefined,
       exercises: [],
@@ -161,6 +174,37 @@ export default function LogActivity() {
             placeholder="Optional"
             suffix="km"
           />
+          {tpl?.splits?.kind === 'average' || (!tpl && activity === 'row') ? (
+            <Field
+              label="Average 500 m split"
+              value={avgSplit}
+              onChangeText={setAvgSplit}
+              keyboardType="numbers-and-punctuation"
+              placeholder="e.g. 2:05.0"
+              suffix="/500 m"
+            />
+          ) : null}
+          {tpl?.splits?.kind === 'intervals' ? (
+            <View style={{ gap: space.sm }}>
+              <Text style={[type.caption, { color: t.text2 }]}>
+                {tpl.splits.distanceM} m splits · try to keep every rep within 2-3 s of your fastest
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+                {splits.map((v, i) => (
+                  <Field
+                    key={i}
+                    label={`#${i + 1}`}
+                    value={v}
+                    onChangeText={(x) => setSplits(splits.map((y, j) => (j === i ? x : y)))}
+                    keyboardType="numbers-and-punctuation"
+                    placeholder="1:50.0"
+                    style={{ width: '30%', minWidth: 92 }}
+                  />
+                ))}
+              </View>
+              <SplitSpread splits={splits.map((x) => cleanSplit(x)).filter((x): x is string => !!x)} />
+            </View>
+          ) : null}
           <View style={{ gap: space.sm }}>
             <Text style={[type.caption, { color: t.text2 }]}>How did it feel?</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
@@ -176,5 +220,25 @@ export default function LogActivity() {
         ) : null}
       </ScrollView>
     </View>
+  );
+}
+
+function toSec(split: string) {
+  const [m, sec] = split.split(':');
+  return parseInt(m, 10) * 60 + parseFloat(sec);
+}
+
+/** Shows how far each rep is from the fastest, against the plan's 2-3 s window. */
+function SplitSpread({ splits }: { splits: string[] }) {
+  const t = useTheme();
+  if (splits.length < 2) return null;
+  const secs = splits.map(toSec);
+  const best = Math.min(...secs);
+  const worst = Math.max(...secs) - best;
+  return (
+    <Text style={[type.footnote, { color: worst <= 3 ? t.good : t.warn }]}>
+      Fastest {splits[secs.indexOf(best)]} · slowest rep +{worst.toFixed(1)} s{' '}
+      {worst <= 3 ? '(within 3 s, nice)' : '(outside the 2-3 s window)'}
+    </Text>
   );
 }

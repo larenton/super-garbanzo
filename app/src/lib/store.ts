@@ -2,15 +2,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { STARTER_TEMPLATES, starterProgram } from '@/data/templates';
+import { LIFT_DAY_TARGETS, MEAL_GUIDE, PLAN_BASELINE, REST_DAY_TARGETS, STARTER_TEMPLATES, starterProgram } from '@/data/templates';
 import { getExercise } from '@/data/exercises';
 import { startOfWeek, today } from './dates';
+import { repTarget } from './reps';
 import type {
   ActiveWorkout,
+  Baseline,
   BodyWeight,
+  CheckIn,
   FoodEntry,
   Goal,
   MacroTargets,
+  MealIdea,
   Program,
   SessionLog,
   SetLog,
@@ -24,7 +28,13 @@ export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().to
 
 export interface AppData {
   settings: Settings;
+  /** Lift-day macro targets. */
   targets: MacroTargets;
+  /** Cardio and rest-day macro targets. */
+  restTargets: MacroTargets;
+  mealGuide: MealIdea[];
+  checkins: Record<string, CheckIn>;
+  baseline: Baseline | null;
   templates: WorkoutTemplate[];
   program: Program;
   /** Per-date overrides of the weekly schedule: a template id, or 'rest'. */
@@ -40,6 +50,10 @@ interface Actions {
   completeOnboarding: (s: Partial<Settings>, data?: Partial<AppData>) => void;
   updateSettings: (s: Partial<Settings>) => void;
   setTargets: (t: MacroTargets) => void;
+  setRestTargets: (t: MacroTargets) => void;
+  setCheckIn: (date: string, patch: Partial<CheckIn>) => void;
+  /** Reloads the Week 1 plan (sessions, schedule, targets) and keeps your history. */
+  loadPlan: () => void;
 
   updateProgram: (p: Partial<Program>) => void;
   setScheduleDay: (day: Weekday, templateId: string | null) => void;
@@ -86,22 +100,38 @@ export function initialData(): AppData {
       showCalendarEvents: true,
       demo: false,
     },
-    targets: { kcal: 2600, protein: 180, carbs: 280, fat: 80 },
+    targets: LIFT_DAY_TARGETS,
+    restTargets: REST_DAY_TARGETS,
+    mealGuide: MEAL_GUIDE,
+    checkins: {},
+    baseline: { date: startOfWeek(today()), ...PLAN_BASELINE },
     templates: STARTER_TEMPLATES,
-    program: starterProgram(startOfWeek(today())),
+    program: { ...starterProgram(startOfWeek(today())), loadedAt: today() },
     overrides: {},
     logs: [],
     food: [],
-    weights: [],
+    weights: [{ date: startOfWeek(today()), kg: PLAN_BASELINE.weightKg }],
     goals: [],
     active: null,
+  };
+}
+
+/** The Week 1 plan's sessions, schedule and nutrition, starting this week. */
+function planData(): Pick<AppData, 'templates' | 'program' | 'targets' | 'restTargets' | 'mealGuide' | 'overrides'> {
+  return {
+    templates: STARTER_TEMPLATES,
+    program: { ...starterProgram(startOfWeek(today())), loadedAt: today() },
+    targets: LIFT_DAY_TARGETS,
+    restTargets: REST_DAY_TARGETS,
+    mealGuide: MEAL_GUIDE,
+    overrides: {},
   };
 }
 
 /** Pre-fill a set row from the last time this exercise was done. */
 function seedSets(exerciseId: string, count: number, reps: string, logs: SessionLog[]): SetLog[] {
   const last = lastPerformance(logs, exerciseId);
-  const targetReps = parseInt(reps, 10) || 8;
+  const targetReps = repTarget(reps);
   return Array.from({ length: count }, (_, i) => {
     const prev = last?.sets[i] ?? last?.sets[last.sets.length - 1];
     return { weight: prev?.weight ?? 0, reps: prev?.reps ?? targetReps, done: false };
@@ -116,6 +146,9 @@ export const useStore = create<AppData & Actions>()(
       completeOnboarding: (s, data) => set((st) => ({ ...data, settings: { ...st.settings, ...data?.settings, ...s, onboarded: true } })),
       updateSettings: (s) => set((st) => ({ settings: { ...st.settings, ...s } })),
       setTargets: (targets) => set({ targets }),
+      setRestTargets: (restTargets) => set({ restTargets }),
+      setCheckIn: (date, patch) => set((st) => ({ checkins: { ...st.checkins, [date]: { ...st.checkins[date], ...patch } } })),
+      loadPlan: () => set(planData()),
 
       updateProgram: (p) => set((st) => ({ program: { ...st.program, ...p } })),
       setScheduleDay: (day, templateId) =>
@@ -261,7 +294,14 @@ export const useStore = create<AppData & Actions>()(
     {
       name: 'kinetic-store-v1',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 1,
+      version: 2,
+      // v2 replaces the generic starter plan with the Week 1 PDF plan; history is kept.
+      migrate: (persisted, version) => {
+        const old = (persisted ?? {}) as Partial<AppData>;
+        const fresh = initialData();
+        const base = { ...fresh, ...old, restTargets: old.restTargets ?? fresh.restTargets, checkins: old.checkins ?? {} };
+        return (version < 2 ? { ...base, ...planData(), baseline: fresh.baseline } : base) as AppData & Actions;
+      },
     },
   ),
 );

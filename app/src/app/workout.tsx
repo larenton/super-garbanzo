@@ -4,6 +4,7 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, Tex
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MuscleThumb } from '@/components/BodyMap';
+import { ExerciseVisual, VideoButton } from '@/components/PlanVisuals';
 import { Button, Card, Icon, ProgressBar, tap, confirmAction } from '@/components/ui';
 import { getExercise } from '@/data/exercises';
 import { lastPerformance, progressionHint } from '@/lib/analytics';
@@ -98,7 +99,9 @@ export default function WorkoutScreen() {
     if (nowDone) {
       tap('success');
       const rest = tpl?.exercises.find((p) => p.exerciseId === active.exercises[ei].exerciseId)?.restSec ?? 90;
-      s.startRest(rest);
+      // Supersets: short or no rest between paired moves, full rest after the last.
+      if (rest > 0) s.startRest(rest);
+      else s.setRestTimer(undefined);
     }
   };
 
@@ -204,128 +207,162 @@ export default function WorkoutScreen() {
         {active.exercises.map((exLog, ei) => {
           const ex = getExercise(exLog.exerciseId);
           const plan = tpl?.exercises.find((p) => p.exerciseId === exLog.exerciseId);
+          const letter = plan?.group?.charAt(0);
+          const groupOf = (i: number) => tpl?.exercises.find((p) => p.exerciseId === active.exercises[i]?.exerciseId)?.group?.charAt(0);
+          const groupSize = letter ? active.exercises.filter((_, i) => groupOf(i) === letter).length : 0;
+          const startsGroup = !!letter && groupSize > 1 && groupOf(ei - 1) !== letter;
+          const groupMembers = tpl?.exercises.filter((p) => p.group?.charAt(0) === letter) ?? [];
+          const timed = !!ex.timed;
           const prev = lastPerformance(s.logs, exLog.exerciseId);
           const hint = plan ? progressionHint(s.logs, exLog.exerciseId, plan.reps, increment(units)) : undefined;
           const allDone = exLog.sets.length > 0 && exLog.sets.every((x) => x.done);
           return (
-            <Card key={`${exLog.exerciseId}-${ei}`} style={{ gap: space.md, opacity: allDone ? 0.75 : 1 }}>
-              <View style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
-                <MuscleThumb primary={ex.primary} secondary={ex.secondary} size={46} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[type.headline, { color: t.text }]}>{ex.name}</Text>
-                  <Text style={[type.footnote, { color: t.text3 }]}>
-                    {plan ? `Target ${plan.sets} × ${plan.reps}` : 'Added exercise'}
-                    {ex.bodyweight ? ' · log added load' : ''}
-                  </Text>
-                  {hint ? <Text style={[type.caption, { color: t.good, marginTop: 2 }]}>{hint}</Text> : null}
-                </View>
-                <Pressable
-                  onPress={() => setOpenTips(openTips === ei ? null : ei)}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Form tips"
-                >
-                  <Icon name={openTips === ei ? 'information-circle' : 'information-circle-outline'} color={t.accent} size={22} />
-                </Pressable>
-              </View>
-              {openTips === ei ? (
-                <View style={{ backgroundColor: t.cardAlt, borderRadius: radius.md, padding: space.md, gap: 4 }}>
-                  {ex.cues.map((c) => (
-                    <Text key={c} style={[type.footnote, { color: t.text2 }]}>
-                      • {c}
+            <View key={`${exLog.exerciseId}-${ei}`} style={{ gap: space.sm }}>
+              {startsGroup ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.xs }}>
+                  <View style={{ backgroundColor: t.strength, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={[type.caption, { color: '#fff', fontWeight: '700' }]}>
+                      {groupSize >= 3 ? 'GIANT SET' : 'SUPERSET'} {letter}
                     </Text>
-                  ))}
-                  {plan?.note ? <Text style={[type.footnote, { color: t.text2 }]}>• {plan.note}</Text> : null}
+                  </View>
+                  <Text style={[type.footnote, { color: t.text3, flex: 1 }]}>
+                    {groupMembers.map((p) => p.group).join(' → ')}, then rest {groupMembers[groupMembers.length - 1]?.restSec ?? 60} s.
+                    Repeat each round.
+                  </Text>
                 </View>
               ) : null}
-
-              <View style={{ flexDirection: 'row', paddingHorizontal: 2 }}>
-                <Text style={[type.caption, { color: t.text3, width: 34 }]}>SET</Text>
-                <Text style={[type.caption, { color: t.text3, flex: 1.3 }]}>PREVIOUS</Text>
-                <Text style={[type.caption, { color: t.text3, flex: 1, textAlign: 'center' }]}>{units.toUpperCase()}</Text>
-                <View style={{ width: space.sm }} />
-                <Text style={[type.caption, { color: t.text3, flex: 1, textAlign: 'center' }]}>REPS</Text>
-                <View style={{ width: 48 }} />
-              </View>
-              {exLog.sets.map((set, si) => {
-                const p = prev?.sets[si];
-                return (
-                  <View
-                    key={si}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: 2,
-                      paddingHorizontal: 2,
-                      borderRadius: radius.sm,
-                      backgroundColor: set.done ? t.goodSoft : 'transparent',
-                    }}
-                  >
-                    <Pressable
-                      onLongPress={() => s.removeSet(ei, si)}
-                      style={{ width: 34 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Set ${si + 1}. Long press to remove.`}
-                    >
-                      <Text style={[type.headline, { color: t.text2 }]}>{si + 1}</Text>
-                    </Pressable>
-                    <Text style={[type.footnote, { color: t.text3, flex: 1.3, fontVariant: ['tabular-nums'] }]} numberOfLines={1}>
-                      {p ? `${formatWeight(p.weight, units, false)} × ${p.reps}` : '—'}
+              <Card
+                style={{
+                  gap: space.md,
+                  opacity: allDone ? 0.75 : 1,
+                  borderLeftWidth: letter && groupSize > 1 ? 4 : 0,
+                  borderLeftColor: t.strength,
+                }}
+              >
+                <View style={{ flexDirection: 'row', gap: space.md, alignItems: 'center' }}>
+                  <MuscleThumb primary={ex.primary} secondary={ex.secondary} size={46} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[type.headline, { color: t.text }]}>
+                      {plan?.group ? <Text style={{ color: t.strength }}>{plan.group} </Text> : null}
+                      {ex.name}
                     </Text>
-                    <NumCell
-                      label={`Set ${si + 1} weight`}
-                      value={toDisplay(set.weight, units)}
-                      done={set.done}
-                      onChange={(n) => s.updateSet(ei, si, { weight: fromDisplay(n, units) })}
-                    />
-                    <View style={{ width: space.sm }} />
-                    <NumCell
-                      label={`Set ${si + 1} reps`}
-                      value={set.reps}
-                      done={set.done}
-                      onChange={(n) => s.updateSet(ei, si, { reps: Math.round(n) })}
-                    />
-                    <Pressable
-                      onPress={() => toggle(ei, si)}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: set.done }}
-                      accessibilityLabel={`Complete set ${si + 1}`}
-                      hitSlop={6}
-                      style={{ width: 48, alignItems: 'flex-end' }}
-                    >
-                      <View
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: radius.sm + 2,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          backgroundColor: set.done ? t.good : t.fill,
-                        }}
-                      >
-                        <Icon name="checkmark" size={20} color={set.done ? '#fff' : t.text3} />
-                      </View>
-                    </Pressable>
+                    <Text style={[type.footnote, { color: t.text3 }]}>
+                      {plan
+                        ? `Target ${plan.sets} × ${plan.reps} · ${plan.restSec ? `${plan.restSec} s rest` : 'no rest'}`
+                        : 'Added exercise'}
+                      {ex.bodyweight ? ' · log added load' : ''}
+                    </Text>
+                    {s.program.tempo && !timed && ex.pattern !== 'core' ? (
+                      <Text style={[type.caption, { color: t.text3 }]}>Tempo {s.program.tempo}</Text>
+                    ) : null}
+                    {hint ? <Text style={[type.caption, { color: t.good, marginTop: 2 }]}>{hint}</Text> : null}
                   </View>
-                );
-              })}
-              <View style={{ flexDirection: 'row', gap: space.sm }}>
-                <Button title="Add set" icon="add" size="sm" variant="secondary" onPress={() => s.addSet(ei)} />
-                <View style={{ flex: 1 }} />
-                <Button
-                  title="Remove"
-                  size="sm"
-                  variant="ghost"
-                  onPress={() => {
-                    if (Platform.OS === 'web') return s.removeExerciseFromActive(ei);
-                    Alert.alert('Remove exercise?', ex.name, [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Remove', style: 'destructive', onPress: () => s.removeExerciseFromActive(ei) },
-                    ]);
-                  }}
-                />
-              </View>
-            </Card>
+                  <Pressable
+                    onPress={() => setOpenTips(openTips === ei ? null : ei)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Form tips"
+                  >
+                    <Icon name={openTips === ei ? 'information-circle' : 'information-circle-outline'} color={t.accent} size={22} />
+                  </Pressable>
+                </View>
+                {openTips === ei ? (
+                  <View style={{ backgroundColor: t.cardAlt, borderRadius: radius.md, padding: space.md, gap: space.sm }}>
+                    <ExerciseVisual exerciseId={exLog.exerciseId} />
+                    {ex.cues.map((c) => (
+                      <Text key={c} style={[type.footnote, { color: t.text2 }]}>
+                        • {c}
+                      </Text>
+                    ))}
+                    {plan?.note ? <Text style={[type.footnote, { color: t.text2 }]}>• {plan.note}</Text> : null}
+                    <VideoButton exerciseId={exLog.exerciseId} compact />
+                  </View>
+                ) : null}
+
+                <View style={{ flexDirection: 'row', paddingHorizontal: 2 }}>
+                  <Text style={[type.caption, { color: t.text3, width: 34 }]}>SET</Text>
+                  <Text style={[type.caption, { color: t.text3, flex: 1.3 }]}>PREVIOUS</Text>
+                  <Text style={[type.caption, { color: t.text3, flex: 1, textAlign: 'center' }]}>{units.toUpperCase()}</Text>
+                  <View style={{ width: space.sm }} />
+                  <Text style={[type.caption, { color: t.text3, flex: 1, textAlign: 'center' }]}>{timed ? 'SEC' : 'REPS'}</Text>
+                  <View style={{ width: 48 }} />
+                </View>
+                {exLog.sets.map((set, si) => {
+                  const p = prev?.sets[si];
+                  return (
+                    <View
+                      key={si}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 2,
+                        paddingHorizontal: 2,
+                        borderRadius: radius.sm,
+                        backgroundColor: set.done ? t.goodSoft : 'transparent',
+                      }}
+                    >
+                      <Pressable
+                        onLongPress={() => s.removeSet(ei, si)}
+                        style={{ width: 34 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Set ${si + 1}. Long press to remove.`}
+                      >
+                        <Text style={[type.headline, { color: t.text2 }]}>{si + 1}</Text>
+                      </Pressable>
+                      <Text style={[type.footnote, { color: t.text3, flex: 1.3, fontVariant: ['tabular-nums'] }]} numberOfLines={1}>
+                        {p ? `${formatWeight(p.weight, units, false)} × ${p.reps}${timed ? ' s' : ''}` : '—'}
+                      </Text>
+                      <NumCell
+                        label={`Set ${si + 1} weight`}
+                        value={toDisplay(set.weight, units)}
+                        done={set.done}
+                        onChange={(n) => s.updateSet(ei, si, { weight: fromDisplay(n, units) })}
+                      />
+                      <View style={{ width: space.sm }} />
+                      <NumCell
+                        label={`Set ${si + 1} ${timed ? 'seconds' : 'reps'}`}
+                        value={set.reps}
+                        done={set.done}
+                        onChange={(n) => s.updateSet(ei, si, { reps: Math.round(n) })}
+                      />
+                      <Pressable
+                        onPress={() => toggle(ei, si)}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: set.done }}
+                        accessibilityLabel={`Complete set ${si + 1}`}
+                        hitSlop={6}
+                        style={{ width: 48, alignItems: 'flex-end' }}
+                      >
+                        <View
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: radius.sm + 2,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: set.done ? t.good : t.fill,
+                          }}
+                        >
+                          <Icon name="checkmark" size={20} color={set.done ? '#fff' : t.text3} />
+                        </View>
+                      </Pressable>
+                    </View>
+                  );
+                })}
+                <View style={{ flexDirection: 'row', gap: space.sm }}>
+                  <Button title="Add set" icon="add" size="sm" variant="secondary" onPress={() => s.addSet(ei)} />
+                  <View style={{ flex: 1 }} />
+                  <Button
+                    title="Remove"
+                    size="sm"
+                    variant="ghost"
+                    onPress={() => {
+                      confirmAction('Remove exercise?', ex.name, 'Remove', () => s.removeExerciseFromActive(ei));
+                    }}
+                  />
+                </View>
+              </Card>
+            </View>
           );
         })}
 

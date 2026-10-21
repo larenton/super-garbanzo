@@ -2,13 +2,21 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { Card, Divider, Field, ModalHeader, Segmented, Stepper, tap } from '@/components/ui';
+import { Card, Chip, Divider, Field, ModalHeader, Stepper, tap } from '@/components/ui';
 import { today } from '@/lib/dates';
 import * as Health from '@/lib/health';
 import { useStore } from '@/lib/store';
 import { space, type, useTheme } from '@/lib/theme';
 import type { FoodEntry, Meal } from '@/lib/types';
 import { kcalFromMacros } from '@/lib/units';
+
+const MEAL_OPTIONS: { value: Meal; label: string }[] = [
+  { value: 'breakfast', label: 'Breakfast' },
+  { value: 'lunch', label: 'Lunch' },
+  { value: 'workout', label: 'Pre/post-workout' },
+  { value: 'dinner', label: 'Dinner' },
+  { value: 'snack', label: 'Snack' },
+];
 
 function defaultMeal(): Meal {
   const h = new Date().getHours();
@@ -24,14 +32,14 @@ const num = (s: string) => {
 };
 
 export default function FoodAdd() {
-  const params = useLocalSearchParams<{ date?: string; meal?: Meal }>();
+  const params = useLocalSearchParams<{ date?: string; meal?: Meal; name?: string; protein?: string; carbs?: string; fat?: string }>();
   const t = useTheme();
   const s = useStore();
   const [meal, setMeal] = useState<Meal>(params.meal ?? defaultMeal());
-  const [name, setName] = useState('');
-  const [p, setP] = useState('');
-  const [c, setC] = useState('');
-  const [f, setF] = useState('');
+  const [name, setName] = useState(params.name ?? '');
+  const [p, setP] = useState(params.protein ?? '');
+  const [c, setC] = useState(params.carbs ?? '');
+  const [f, setF] = useState(params.fat ?? '');
   const [kcalOverride, setKcalOverride] = useState('');
   const [servings, setServings] = useState(1);
   const date = params.date ?? today();
@@ -78,16 +86,11 @@ export default function FoodAdd() {
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <ModalHeader title="Log food" onCancel={() => router.back()} onSave={save} canSave={valid} saveLabel="Add" />
       <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.lg, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        <Segmented<Meal>
-          options={[
-            { value: 'breakfast', label: 'Breakfast' },
-            { value: 'lunch', label: 'Lunch' },
-            { value: 'dinner', label: 'Dinner' },
-            { value: 'snack', label: 'Snack' },
-          ]}
-          value={meal}
-          onChange={setMeal}
-        />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+          {MEAL_OPTIONS.map((o) => (
+            <Chip key={o.value} label={o.label} selected={meal === o.value} onPress={() => setMeal(o.value)} />
+          ))}
+        </View>
         <Card style={{ gap: space.md }}>
           <Field
             label="Food"

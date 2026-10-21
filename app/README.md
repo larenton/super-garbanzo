@@ -9,6 +9,26 @@ An iPhone-first training tracker built with Expo (React Native + TypeScript).
 | **Macros** | Calorie ring plus protein, carbs and fat bars. Meals are grouped by breakfast, lunch, dinner and snacks, with a 7-day trend against your target. |
 | **Progress** | **Trends** (estimated 1RM per lift, body weight, consistency, training volume, distance outside the gym, steps, nutrition), **Goals**, and **History**. |
 
+## Your Week 1 plan
+
+The app ships with the **Week 1 Training Plan** PDF built in. It starts this week and runs for 6 weeks:
+
+| Mon | Tue | Wed | Thu | Fri | Sat | Sun |
+| --- | --- | --- | --- | --- | --- | --- |
+| Push · Shoulders & Chest | Steady row | Pull · Lats & Back | Row intervals 5 × 500 m | Legs & Core | Easy cardio + mobility | Rest |
+
+- **Every session** has the plan's supersets (A1/A2 …), sets × reps, rest, coaching notes, warm-up, "why this session" and the progression and benchmark notes. There's also a 2K row test you can swap in.
+- **All 24 moves** have the guide's start/finish illustration (cropped from the PDF), its three coaching cues and its **Watch a demo video** link. You'll see them in the session flow, the workout logger and each exercise's page.
+- **The rules this week**, the **tempo 3-0-1-0** diagram and the **Easy / Steady / Hard** effort scale (RPE) are on the Plan tab and each session.
+- **Rule 3 is a button:** "Feeling flat? Swap it" puts steady cardio in today and moves the lift to tomorrow.
+- **Macros:** 2,500 kcal on lift days and 2,300 kcal on cardio and rest days (P 145, C 320 or 270, F 70). Today and Macros pick the right one automatically. The daily meal split is tap-to-log.
+- **The adjusting rule:** your weekly average weight is compared with last week's (aim for flat or +0.1-0.25 kg/week). If it drops more than 0.5 kg, the app tells you to add about 150 kcal a day.
+- **Your starting point** (69.3 kg, 64.1 kg lean mass, 7.5% scale, 19.6% DEXA) appears on Progress.
+- **The check-in log** (morning weight, session done, energy 1-10, sleep, protein hit) is on Today.
+- **Week report** (Progress, or Today → Week report) gathers what the plan asks for at the end of the week: average weight, waist, Tuesday row split, Thursday 500 m splits, top shoulder press, pull-ups and leg press, and how you felt. **Copy report** puts it on the clipboard to paste into your Claude project.
+
+To start over from the plan, use Settings → **Reload Week 1 plan**. Your logged history is kept.
+
 ### Workout diagrams
 
 - **Muscle map**: front and back figures with primary and secondary muscles highlighted. It appears on every session, every exercise and every finished workout.
@@ -78,9 +98,11 @@ src/
     log/[id]           Finished session summary
     exercise/[id]      Technique cues, muscle map, e1RM history
     plan-edit, template/[id], exercise-picker
+    report             End-of-week report for your Claude project
     food-add, log-activity, goal-add, weight-add, settings, onboarding
   components/          UI kit, BodyMap, WorkoutDiagram, Charts, SessionCard, MacroSummary
-  data/                Exercise library (37 movements) and the starter plan
+  data/                Week 1 plan (templates.ts), its 24 exercises + media (planExercises.ts, exerciseMedia.ts), wider library
+assets/exercises/      Start/finish illustrations cropped from the plan PDF
   lib/
     store.ts           Zustand store persisted to AsyncStorage
     analytics.ts       Plan resolution, e1RM, PRs, weekly buckets, goal projection

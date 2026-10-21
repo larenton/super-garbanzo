@@ -35,6 +35,10 @@ export interface Exercise {
   cues: string[];
   /** Bodyweight movements log added load only (0 = bodyweight). */
   bodyweight?: boolean;
+  /** Section of the plan's exercise guide this move belongs to. */
+  guide?: 'push' | 'pull' | 'legs';
+  /** Logged in seconds (holds, sled pushes) rather than reps. */
+  timed?: boolean;
 }
 
 export interface PlannedExercise {
@@ -44,6 +48,8 @@ export interface PlannedExercise {
   reps: string;
   restSec: number;
   note?: string;
+  /** Superset label from the plan, e.g. "A1". Same letter = done back to back. */
+  group?: string;
 }
 
 /** One block of a cardio session, used to draw the effort profile. */
@@ -54,7 +60,7 @@ export interface CardioSegment {
   zone: 1 | 2 | 3 | 4 | 5;
 }
 
-export type ActivityType = 'run' | 'walk' | 'cycle' | 'hike' | 'swim' | 'row' | 'yoga' | 'hiit' | 'sport' | 'strength';
+export type ActivityType = 'run' | 'walk' | 'cycle' | 'hike' | 'swim' | 'row' | 'yoga' | 'hiit' | 'mixed' | 'sport' | 'strength';
 
 export interface WorkoutTemplate {
   id: string;
@@ -67,6 +73,20 @@ export interface WorkoutTemplate {
   activity?: ActivityType;
   segments?: CardioSegment[];
   targetDistanceKm?: number;
+  warmup?: string;
+  /** Coach's reasoning for the session. */
+  why?: string;
+  /** Progression or benchmark note shown under the session. */
+  note?: string;
+  /** Effort guide, e.g. "Steady · RPE 5-6 · short sentences". */
+  intensity?: string;
+  /** Row splits to record: an average 500 m split, or one split per interval. */
+  splits?: { kind: 'average' } | { kind: 'intervals'; count: number; distanceM: number };
+}
+
+export interface PlanRule {
+  title: string;
+  body: string;
 }
 
 /** Weekday index: 0 = Monday … 6 = Sunday. */
@@ -80,6 +100,13 @@ export interface Program {
   schedule: Record<Weekday, string | null>;
   /** Default session start time, "HH:MM". */
   sessionTime: string;
+  /** One-line goal of the block. */
+  summary?: string;
+  rules?: PlanRule[];
+  /** Lifting tempo, e.g. "3-0-1-0" (lower, pause, lift, pause in seconds). */
+  tempo?: string;
+  /** Date the plan was loaded; planned days before it aren't counted as missed. */
+  loadedAt?: string;
 }
 
 export interface SetLog {
@@ -112,9 +139,13 @@ export interface SessionLog {
   notes?: string;
   source: 'app' | 'health';
   healthUuid?: string;
+  /** Average 500 m split, "m:ss.s". */
+  avgSplit?: string;
+  /** One split per interval rep. */
+  splits?: string[];
 }
 
-export type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export type Meal = 'breakfast' | 'lunch' | 'workout' | 'dinner' | 'snack';
 
 export interface FoodEntry {
   id: string;
@@ -133,6 +164,34 @@ export interface MacroTargets {
   protein: number;
   carbs: number;
   fat: number;
+}
+
+/** A row of the plan's daily meal split. */
+export interface MealIdea {
+  meal: Meal;
+  label: string;
+  protein: number;
+  carbs: number;
+  fat: number;
+  idea: string;
+}
+
+/** Daily check-in from the plan: energy and sleep (weight, session and protein are tracked elsewhere). */
+export interface CheckIn {
+  energy?: number;
+  sleepHours?: number;
+  waistCm?: number;
+  note?: string;
+}
+
+/** Starting measurements from the plan. */
+export interface Baseline {
+  date: string;
+  weightKg: number;
+  leanMassKg?: number;
+  bodyFatScale?: number;
+  bodyFatDexa?: number;
+  dexaDate?: string;
 }
 
 export interface BodyWeight {

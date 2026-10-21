@@ -3,7 +3,9 @@ import { Text, View } from 'react-native';
 
 import { BodyMap, type MuscleLevels } from '@/components/BodyMap';
 import { LineChart } from '@/components/Charts';
+import { ExerciseVisual, VideoButton } from '@/components/PlanVisuals';
 import { Card, Chip, Divider, EmptyState, Screen, SectionTitle, Stat } from '@/components/ui';
+import { getMedia } from '@/data/exerciseMedia';
 import { EQUIPMENT_LABELS, getExercise } from '@/data/exercises';
 import { e1rmSeries, personalBest, sortedLogs } from '@/lib/analytics';
 import { formatDayMonth } from '@/lib/dates';
@@ -36,6 +38,8 @@ export default function ExerciseScreen() {
     .filter((h) => h.ex && h.ex.sets.length)
     .slice(0, 12);
 
+  const inPlan = s.templates.flatMap((template) => template.exercises.filter((pe) => pe.exerciseId === id).map((pe) => ({ template, pe })));
+
   const levels: MuscleLevels = {};
   ex.secondary.forEach((m) => (levels[m] = 0.5));
   ex.primary.forEach((m) => (levels[m] = 1));
@@ -51,11 +55,47 @@ export default function ExerciseScreen() {
       <Screen>
         <View style={{ gap: space.sm }}>
           <Text style={[type.largeTitle, { color: t.text }]}>{ex.name}</Text>
-          <View style={{ flexDirection: 'row', gap: space.sm }}>
+          <View style={{ flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' }}>
+            {ex.guide ? (
+              <Chip label={ex.guide.toUpperCase()} color={ex.guide === 'push' ? t.cardio : ex.guide === 'pull' ? t.strength : t.warn} />
+            ) : null}
             <Chip label={EQUIPMENT_LABELS[ex.equipment]} />
             <Chip label={PATTERN_LABELS[ex.pattern]} />
           </View>
         </View>
+
+        {getMedia(id) ? (
+          <Card style={{ gap: space.md }}>
+            <ExerciseVisual exerciseId={id} />
+            <Text style={[type.caption, { color: t.text3 }]}>
+              Dark limbs are the side nearest you, grey limbs the far side. Red arrows show the direction of movement.
+            </Text>
+            <VideoButton exerciseId={id} />
+          </Card>
+        ) : null}
+
+        {inPlan.length ? (
+          <>
+            <SectionTitle title="In your plan" />
+            <Card style={{ paddingVertical: space.xs }}>
+              {inPlan.map((p, i) => (
+                <View key={`${p.template.id}-${i}`}>
+                  {i > 0 ? <Divider /> : null}
+                  <View style={{ paddingVertical: space.md, gap: 2 }}>
+                    <Text style={[type.subhead, { color: t.text }]}>
+                      {p.pe.group ? `${p.pe.group} · ` : ''}
+                      {p.template.name}
+                    </Text>
+                    <Text style={[type.footnote, { color: t.text2 }]}>
+                      {p.pe.sets} × {p.pe.reps} · {p.pe.restSec ? `${p.pe.restSec} s rest` : 'no rest'}
+                      {p.pe.note ? ` · ${p.pe.note}` : ''}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </Card>
+          </>
+        ) : null}
 
         <Card>
           <BodyMap levels={levels} size={200} />
@@ -116,6 +156,7 @@ export default function ExerciseScreen() {
                         >
                           <Text style={[type.footnote, { color: t.text, fontVariant: ['tabular-nums'] }]}>
                             {formatWeight(st.weight, units, false)} × {st.reps}
+                            {ex.timed ? ' s' : ''}
                           </Text>
                         </View>
                       ))}

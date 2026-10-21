@@ -52,6 +52,7 @@ export default function RootLayout() {
             <Stack.Screen name="plan-edit" options={{ title: 'Edit plan' }} />
             <Stack.Screen name="template/[id]" options={{ title: 'Workout' }} />
             <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+            <Stack.Screen name="report" options={{ title: 'Week report' }} />
             <Stack.Screen name="workout" options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="log-activity" options={modal} />
             <Stack.Screen name="food-add" options={modal} />

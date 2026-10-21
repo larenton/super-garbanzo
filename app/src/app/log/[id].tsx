@@ -112,6 +112,7 @@ export default function LogScreen() {
                       <View key={j} style={{ backgroundColor: t.fill, borderRadius: radius.sm, paddingHorizontal: 10, paddingVertical: 6 }}>
                         <Text style={[type.subhead, { color: t.text, fontVariant: ['tabular-nums'] }]}>
                           {e.bodyweight && st.weight === 0 ? 'BW' : formatWeight(st.weight, units, false)} × {st.reps}
+                          {e.timed ? ' s' : ''}
                         </Text>
                       </View>
                     ))}
@@ -121,6 +122,27 @@ export default function LogScreen() {
               );
             })}
           </>
+        ) : null}
+
+        {log.avgSplit || log.splits?.length ? (
+          <Card style={{ gap: space.sm }}>
+            <Text style={[type.headline, { color: t.text }]}>Row splits</Text>
+            {log.avgSplit ? (
+              <Text style={[type.body, { color: t.text2 }]}>
+                Average <Text style={{ color: t.text, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{log.avgSplit}</Text> /500 m
+              </Text>
+            ) : null}
+            {log.splits?.length ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
+                {log.splits.map((sp, i) => (
+                  <View key={i} style={{ backgroundColor: t.fill, borderRadius: radius.sm, paddingHorizontal: 10, paddingVertical: 6 }}>
+                    <Text style={[type.caption, { color: t.text3 }]}>#{i + 1}</Text>
+                    <Text style={[type.subhead, { color: t.text, fontVariant: ['tabular-nums'] }]}>{sp || '—'}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </Card>
         ) : null}
 
         {log.notes ? (

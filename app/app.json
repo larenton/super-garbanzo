@@ -45,7 +45,8 @@
           "NSHealthUpdateUsageDescription": "Kinetic saves the workouts, nutrition and body weight you log to Apple Health.",
           "background": false
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

@@ -36,7 +36,7 @@ export function dayStatus(s: PlanState, logs: SessionLog[], date: string): DaySt
   const t = today();
   if (planned) {
     if (done.some((l) => l.templateId === planned) || done.length > 0) return 'done';
-    if (date < t) return 'missed';
+    if (date < t) return s.program.loadedAt && date < s.program.loadedAt ? 'planned' : 'missed';
     return date === t ? 'today' : 'planned';
   }
   return done.length > 0 ? 'extra' : 'rest';
@@ -74,6 +74,7 @@ export function lastPerformance(logs: SessionLog[], exerciseId: string, before?:
 }
 
 export function bestSet(ex: ExerciseLog) {
+  if (getExercise(ex.exerciseId).timed) return { weight: Math.max(0, ...ex.sets.map((s) => s.weight)), reps: 0, e1rm: 0 };
   let best = { weight: 0, reps: 0, e1rm: 0 };
   for (const s of ex.sets) {
     const v = e1rm(s.weight, s.reps);
@@ -115,8 +116,11 @@ export function detectPRs(log: SessionLog, allLogs: SessionLog[]): string[] {
     .map((ex) => ex.exerciseId);
 }
 
+/** Tonnage (weight × reps). Timed holds are left out because their "reps" are seconds. */
 export function sessionVolume(log: SessionLog): number {
-  return log.exercises.reduce((acc, ex) => acc + ex.sets.reduce((a, s) => a + s.weight * s.reps, 0), 0);
+  return log.exercises
+    .filter((ex) => !getExercise(ex.exerciseId).timed)
+    .reduce((acc, ex) => acc + ex.sets.reduce((a, s) => a + s.weight * s.reps, 0), 0);
 }
 
 export function sessionSets(log: SessionLog): number {
@@ -168,6 +172,11 @@ export interface MacroTotals {
   fat: number;
 }
 
+/** Lift days get the higher-carb targets; cardio and rest days the lower. */
+export function targetsFor(s: PlanState & { targets: MacroTargets; restTargets: MacroTargets }, date: string): MacroTargets {
+  return plannedTemplate(s, date)?.kind === 'strength' ? s.targets : s.restTargets;
+}
+
 export function macroTotals(food: FoodEntry[], date: string): MacroTotals {
   return food
     .filter((f) => f.date === date)
@@ -202,6 +211,47 @@ export function proteinHitRate(food: FoodEntry[], targets: MacroTargets, days: n
   const series = dailyMacroSeries(food, days).filter((d) => d.kcal > 0);
   if (series.length === 0) return 0;
   return series.filter((d) => d.protein >= targets.protein * 0.95).length / series.length;
+}
+
+export interface WeightTrend {
+  thisWeekAvg?: number;
+  lastWeekAvg?: number;
+  change?: number;
+  weighIns: number;
+  status: 'need-data' | 'dropping-fast' | 'dropping' | 'flat' | 'on-target' | 'rising-fast';
+  advice: string;
+}
+
+/**
+ * The plan's adjusting rule: average 3+ morning weigh-ins a week and aim for
+ * flat or +0.1-0.25 kg/week; a drop of more than 0.5 kg means add ~150 kcal/day.
+ */
+export function weightTrend(weights: BodyWeight[], endDate = today()): WeightTrend {
+  const weekStart = startOfWeek(endDate);
+  const avg = (from: string, to: string) => {
+    const w = weights.filter((x) => x.date >= from && x.date <= to);
+    return w.length ? { avg: w.reduce((a, x) => a + x.kg, 0) / w.length, n: w.length } : undefined;
+  };
+  const cur = avg(weekStart, addDays(weekStart, 6));
+  const prev = avg(addDays(weekStart, -7), addDays(weekStart, -1));
+  const weighIns = cur?.n ?? 0;
+  if (!cur || !prev) {
+    return {
+      thisWeekAvg: cur?.avg,
+      lastWeekAvg: prev?.avg,
+      weighIns,
+      status: 'need-data',
+      advice: `Weigh in 3 mornings this week (${weighIns}/3 so far). The weekly average is compared with last week's.`,
+    };
+  }
+  const change = cur.avg - prev.avg;
+  const base = { thisWeekAvg: cur.avg, lastWeekAvg: prev.avg, change, weighIns };
+  if (change < -0.5) return { ...base, status: 'dropping-fast', advice: 'Down more than 0.5 kg on last week. Add about 150 kcal a day.' };
+  if (change < -0.1)
+    return { ...base, status: 'dropping', advice: 'Slightly down on last week. Watch it: the aim is flat or slowly rising.' };
+  if (change <= 0.1) return { ...base, status: 'flat', advice: 'Flat on last week. That is within the plan.' };
+  if (change <= 0.25) return { ...base, status: 'on-target', advice: 'Rising 0.1-0.25 kg a week: right on plan.' };
+  return { ...base, status: 'rising-fast', advice: 'Rising faster than 0.25 kg a week. Keep an eye on it before changing anything.' };
 }
 
 export function latestWeight(weights: BodyWeight[]): BodyWeight | undefined {
@@ -284,6 +334,7 @@ export function goalProgress(
 
 /** Simple double-progression hint based on the last session. */
 export function progressionHint(logs: SessionLog[], exerciseId: string, reps: string, inc: number): string | undefined {
+  if (getExercise(exerciseId).timed) return undefined;
   const last = lastPerformance(logs, exerciseId);
   if (!last || last.sets.length === 0) return undefined;
   const top = parseInt(reps.split('-').pop() ?? reps, 10);

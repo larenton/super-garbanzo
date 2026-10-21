@@ -1,6 +1,9 @@
 import type { Exercise, Muscle } from '@/lib/types';
 
-export const EXERCISES: Exercise[] = [
+import { PLAN_EXERCISES } from './planExercises';
+
+/** General library for building your own workouts. */
+const LIBRARY: Exercise[] = [
   // Push
   {
     id: 'bench-press',
@@ -301,6 +304,7 @@ export const EXERCISES: Exercise[] = [
   // Core & carries
   {
     id: 'plank',
+    timed: true,
     name: 'Plank',
     primary: ['abs'],
     secondary: ['obliques', 'frontDelts'],
@@ -347,6 +351,11 @@ export const EXERCISES: Exercise[] = [
     cues: ['Tall posture', 'Short quick steps', 'Crush the handles'],
   },
 ];
+
+const planIds = new Set(PLAN_EXERCISES.map((e) => e.id));
+
+/** Plan moves first (their guide cues win), then the rest of the library. */
+export const EXERCISES: Exercise[] = [...PLAN_EXERCISES, ...LIBRARY.filter((e) => !planIds.has(e.id))];
 
 const byId = new Map(EXERCISES.map((e) => [e.id, e]));
 

@@ -4,8 +4,9 @@ import { Platform, Pressable, Text, View } from 'react-native';
 
 import { BarChart } from '@/components/Charts';
 import { MacroSummary } from '@/components/MacroSummary';
-import { Card, Divider, Icon, IconButton, LargeHeader, Screen, SectionTitle, tap, confirmAction } from '@/components/ui';
-import { dailyMacroSeries, macroAverages, macroTotals, proteinHitRate } from '@/lib/analytics';
+import { Button, Card, Divider, Icon, IconButton, LargeHeader, Screen, SectionTitle, tap, confirmAction } from '@/components/ui';
+import { dailyMacroSeries, macroAverages, macroTotals, plannedTemplate, proteinHitRate, targetsFor, weightTrend } from '@/lib/analytics';
+import { NUTRITION_NOTES } from '@/data/templates';
 import { addDays, relativeDay, today, WEEKDAYS_SHORT, weekdayOf } from '@/lib/dates';
 import { useStore } from '@/lib/store';
 import { space, type, useTheme } from '@/lib/theme';
@@ -15,6 +16,7 @@ import { formatNumber } from '@/lib/units';
 const MEALS: { key: Meal; label: string; icon: string }[] = [
   { key: 'breakfast', label: 'Breakfast', icon: 'cafe-outline' },
   { key: 'lunch', label: 'Lunch', icon: 'sunny-outline' },
+  { key: 'workout', label: 'Pre/post-workout', icon: 'barbell-outline' },
   { key: 'dinner', label: 'Dinner', icon: 'moon-outline' },
   { key: 'snack', label: 'Snacks', icon: 'nutrition-outline' },
 ];
@@ -28,6 +30,14 @@ export default function NutritionScreen() {
   const week = dailyMacroSeries(s.food, 7, today());
   const avg = macroAverages(s.food, 7);
   const hit = proteinHitRate(s.food, s.targets, 7);
+  const dayTargets = targetsFor(s, date);
+  const isLiftDay = plannedTemplate(s, date)?.kind === 'strength';
+  const trend = weightTrend(s.weights);
+  const quickAdd = (m: (typeof s.mealGuide)[number]) =>
+    router.push({
+      pathname: '/food-add',
+      params: { date, meal: m.meal, name: m.idea, protein: String(m.protein), carbs: String(m.carbs), fat: String(m.fat) },
+    });
 
   const remove = (f: FoodEntry) => {
     const go = () => {
@@ -57,8 +67,55 @@ export default function NutritionScreen() {
         />
       </View>
 
-      <Card>
-        <MacroSummary totals={totals} targets={s.targets} />
+      <Card style={{ gap: space.md }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+          <Icon name={isLiftDay ? 'barbell' : 'walk'} size={16} color={isLiftDay ? t.strength : t.cardio} />
+          <Text style={[type.subhead, { color: t.text2 }]}>
+            {isLiftDay ? 'Lift day' : 'Cardio / rest day'} · {formatNumber(dayTargets.kcal)} kcal · P {dayTargets.protein} · C{' '}
+            {dayTargets.carbs} · F {dayTargets.fat}
+          </Text>
+        </View>
+        <MacroSummary totals={totals} targets={dayTargets} />
+      </Card>
+
+      <SectionTitle title="Meal guide" />
+      <Card style={{ paddingVertical: space.xs }}>
+        {s.mealGuide.map((m, i) => {
+          const logged = entries.some((e) => e.meal === m.meal);
+          return (
+            <View key={m.meal}>
+              {i > 0 ? <Divider /> : null}
+              <Pressable
+                onPress={() => quickAdd(m)}
+                accessibilityRole="button"
+                accessibilityLabel={`Log ${m.label}: ${m.idea}`}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: space.md,
+                  paddingVertical: space.md,
+                  opacity: pressed ? 0.6 : 1,
+                })}
+              >
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={[type.subhead, { color: t.text }]}>{m.label}</Text>
+                  <Text style={[type.footnote, { color: t.text3 }]} numberOfLines={1}>
+                    {m.idea}
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: space.md }}>
+                    <Macro color={t.protein} label="P" value={m.protein} />
+                    <Macro color={t.carbs} label="C" value={m.carbs} />
+                    <Macro color={t.fat} label="F" value={m.fat} />
+                  </View>
+                </View>
+                <Icon name={logged ? 'checkmark-circle' : 'add-circle-outline'} size={24} color={logged ? t.good : t.accent} />
+              </Pressable>
+            </View>
+          );
+        })}
+        <Text style={[type.caption, { color: t.text3, paddingBottom: space.md }]}>
+          Lift-day example · tap to log it, then adjust. {NUTRITION_NOTES.restDay}
+        </Text>
       </Card>
 
       {MEALS.map((m) => {
@@ -126,12 +183,49 @@ export default function NutritionScreen() {
           data={week.map((d) => ({
             label: WEEKDAYS_SHORT[weekdayOf(d.date)].slice(0, 1),
             value: d.kcal,
+            ghost: targetsFor(s, d.date).kcal,
             detail: `${formatNumber(d.kcal)} kcal · P ${Math.round(d.protein)}g · C ${Math.round(d.carbs)}g · F ${Math.round(d.fat)}g`,
           }))}
           color={t.accent}
-          target={s.targets.kcal}
-          summary={`Dashed line = ${formatNumber(s.targets.kcal)} kcal target · tap a bar`}
+          summary="Dashed outline = that day's target · tap a bar"
         />
+      </Card>
+
+      <SectionTitle title="Weekly weigh-in" />
+      <Card style={{ gap: space.md }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Mini
+            label="This week avg"
+            value={trend.thisWeekAvg ? trend.thisWeekAvg.toFixed(1) : '—'}
+            unit={`kg · ${trend.weighIns}/3 weigh-ins`}
+          />
+          <Mini label="Last week avg" value={trend.lastWeekAvg ? trend.lastWeekAvg.toFixed(1) : '—'} unit="kg" />
+          <Mini
+            label="Change"
+            value={trend.change !== undefined ? `${trend.change >= 0 ? '+' : '−'}${Math.abs(trend.change).toFixed(2)}` : '—'}
+            unit="kg"
+          />
+        </View>
+        <View
+          style={{
+            flexDirection: 'row',
+            gap: space.sm,
+            alignItems: 'flex-start',
+            backgroundColor:
+              trend.status === 'dropping-fast' ? t.warnSoft : trend.status === 'on-target' || trend.status === 'flat' ? t.goodSoft : t.fill,
+            borderRadius: 10,
+            padding: space.md,
+          }}
+        >
+          <Icon
+            name={trend.status === 'dropping-fast' ? 'warning' : trend.status === 'need-data' ? 'scale-outline' : 'checkmark-circle'}
+            size={18}
+            color={trend.status === 'dropping-fast' ? t.warn : trend.status === 'need-data' ? t.text2 : t.good}
+          />
+          <Text style={[type.footnote, { color: t.text, flex: 1 }]}>{trend.advice}</Text>
+        </View>
+        <Text style={[type.caption, { color: t.text3 }]}>{NUTRITION_NOTES.adjusting}</Text>
+        <Button title="Log morning weight" icon="add" size="md" variant="secondary" onPress={() => router.push('/weight-add')} />
       </Card>
       <Text style={[type.caption, { color: t.text3, textAlign: 'center' }]}>
         {Platform.OS === 'web' ? 'Targets live in Settings.' : 'Long-press an entry to delete it. Targets live in Settings.'}

@@ -109,13 +109,18 @@ export async function syncPlanToCalendar(
     const endDate = new Date(startDate.getTime() + t.durationMin * 60000);
     const lines =
       t.exercises.length > 0
-        ? t.exercises.map((e) => `• ${getExercise(e.exerciseId).name} — ${e.sets} × ${e.reps}`)
+        ? t.exercises.map(
+            (e) =>
+              `${e.group ? `${e.group}  ` : '• '}${getExercise(e.exerciseId).name} — ${e.sets} × ${e.reps}${e.restSec ? `, ${e.restSec} s rest` : ''}`,
+          )
         : (t.segments ?? []).map((s) => `• ${s.label} — ${s.minutes} min (Z${s.zone})`);
     await cal.createEvent({
       title: t.name,
       startDate,
       endDate,
-      notes: `${t.description}\n\n${lines.join('\n')}\n\nOpen Kinetic to log this session.`,
+      notes: [t.description, t.warmup ? `Warm-up: ${t.warmup}` : '', lines.join('\n'), 'Open Kinetic to log this session.']
+        .filter(Boolean)
+        .join('\n\n'),
       url: `kinetic://session/${date}`,
       alarms: [{ relativeOffset: -60 }],
     });
